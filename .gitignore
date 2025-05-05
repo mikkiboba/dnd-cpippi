@@ -1,1 +1,4 @@
 CMakeLists.txt
+opencv
+build
+.DS_Store
