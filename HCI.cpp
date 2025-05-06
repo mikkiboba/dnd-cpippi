@@ -1,17 +1,61 @@
 ﻿// HCI.cpp: definisce il punto di ingresso dell'applicazione.
 //
 #include <opencv2/opencv.hpp> 
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-
-#include <iostream>
 
 #include "HCI.h"
 
 
 // TODO: cv::createBackgroundSubtractorMOG2() or cv::createBackgroundSubtractorKNN()
 
+struct Pedina{
+	int id;
+	cv::Vec2i position;
+	cv::Vec3i color;
+};
+
+int getDim(cv::Mat img, bool xy, cv::Point pt) {
+	int cellShift = 20;
+	int count = 0;
+	int length = (xy == 0) ? img.cols : img.rows; 
+	uchar prec;
+	for (int i = 0; i<length; i++) {
+		if (xy==0) {
+			pt.y = pt.y + 1;
+			prec = img.at<uchar>(pt.y - 1 + cellShift, pt.x+cellShift);
+		}
+		else {
+			pt.x = pt.x + 1;
+			prec = img.at<uchar>(pt.y + cellShift, pt.x -1 +cellShift);
+		}
+		uchar pixelVal = img.at<uchar>(pt.y + cellShift, pt.x+cellShift);		
+		if (static_cast<int>(pixelVal) == 255 && static_cast<int>(prec)==0) {
+			count++;		
+		}
+		
+	}
+	if (xy==0) {std::cout << "Number of row lines " << count << std::endl;}
+	else {std::cout << "Number of col lines " << count << std::endl;}
+	
+	return count;
+
+}
+
+int getOffset(cv::Mat img, bool xy) {
+	int length = (xy == 0) ? img.cols : img.rows; 
+	int center = (xy == 0) ? img.rows : img.cols;
+	center = round(center/2);
+	cv::Point pos(0,0);
+	for (int i = 0; i < length; i++) {	
+		if (xy==1){ pos = cv::Point(center,i);}
+		else pos = cv::Point(i, center);
+		uchar pixelVal = img.at<uchar>(pos.y, pos.x);		
+		if (static_cast<int>(pixelVal) == 255) {
+			if (xy == 0) return pos.x;
+			return pos.y;
+		}
+	}
+	return 0;
+}
 
 
 void showImg(cv::Mat img) {
@@ -22,45 +66,95 @@ void showImg(cv::Mat img) {
 
 int main()
 {
-	cv::Mat image = cv::imread("../imgs/background.jpg");
+	cv::Vec2i inizioBordo = NULL;
 
-	if (image.empty()) {
-        std::cerr << "Could not read the image" << std::endl;
-        return 1;
-    }
+	cv::Mat background = cv::imread("../imgs/background.jpg");
+	cv::Mat frame = cv::imread("../imgs/backgroundGridPiedini.png");
 
-	cv::Mat hsv_image;
-	cv::cvtColor(image, hsv_image, cv::COLOR_BGR2HSV);
-
-	cv::Mat pixels;
-	hsv_image.reshape(1, hsv_image.total()).convertTo(pixels, CV_32F);
-
-	int clusters = 5;
-	cv::Mat labels, centers;
-    cv::kmeans(pixels, clusters, labels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 10, 1.0), 3, cv::KMEANS_PP_CENTERS, centers);
-
-	int largest_cluster_idx = 0;
-	int largest_cluster_size = 0;
-	for (int i = 0; i < clusters; i++) {
-		int cluster_size = cv::countNonZero(labels==i);
-		if (cluster_size > largest_cluster_size) {
-			largest_cluster_size = cluster_size;
-			largest_cluster_idx = i;
-		}
+	if (background.empty() || frame.empty()) {
+		std::cerr << "Could not load images!" << std::endl;
+		return -1;
 	}
 
-	cv::Vec3f prevalent_color = centers.at<cv::Vec3f>(largest_cluster_idx);
-	std::cout << "Prevalent color: " << prevalent_color << std::endl;
+	cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub = cv::createBackgroundSubtractorMOG2();
 
-	cv::Mat hsv_pixel(1, 1, CV_32FC3, prevalent_color);
-	cv::Mat bgr_pixel;
-	cv::cvtColor(hsv_pixel, bgr_pixel, cv::COLOR_HSV2BGR);
+	cv::Mat fgMask;
 
-	bgr_pixel.convertTo(bgr_pixel, CV_8UC3);
+	pBackSub -> apply(background, fgMask, 1.0);
+	pBackSub -> apply(frame, fgMask, 0.0);
 
-	cv::Mat color_image(100, 100, CV_8UC3, bgr_pixel.at<cv::Vec3b>(0, 0));
-	showImg(color_image);
+	cv::threshold(fgMask, fgMask, 100, 255, cv::THRESH_BINARY);
+	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+	cv::morphologyEx(fgMask, fgMask, cv::MORPH_OPEN, kernel);
+	cv::morphologyEx(fgMask, fgMask, cv::MORPH_CLOSE, kernel);
 
+	int offsetX = 0;
+	int offsetY = 0;
+
+	offsetX = getOffset(fgMask, 0);
+	offsetY = getOffset(fgMask, 1);
+
+	cv::Point pt1(offsetX, offsetY);
+	cv::Point pt2(fgMask.cols-offsetX, offsetY);
+	cv::Point pt3(offsetX, fgMask.rows-offsetY);
+	cv::Point pt4(fgMask.cols-offsetX, fgMask.rows-offsetY);
+
+	/*
+	cv::circle(frame, pt1, 20, cv::Scalar(255, 0, 0), -1);
+	cv::circle(frame, pt2, 20, cv::Scalar(255, 0, 0), -1);
+	cv::circle(frame, pt3, 20, cv::Scalar(255, 0, 0), -1);
+	cv::circle(frame, pt4, 20, cv::Scalar(255, 0, 0), -1);*/
+	showImg(fgMask);
+
+	int countRows = getDim(fgMask, 0,pt1);
+	int countCols = getDim(fgMask, 1,pt1);
+
+	cv::Mat backgroundGrid = cv::imread("../imgs/backgroundGrid.png");
+	cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub2 = cv::createBackgroundSubtractorMOG2();
+	pBackSub2 -> apply(backgroundGrid, fgMask, 1.0);
+	pBackSub2 -> apply(frame, fgMask, 0.0);
+
+
+	int hLen = fgMask.cols - (2*offsetX);
+	int vLen = fgMask.rows - (2*offsetY);
+
+	int cellSize = round(hLen / countCols);
+
+	int caccount = 0;
+	int pipiount = 0;
+	for (int row = pt1.y; row < pt3.y; row+=cellSize) {
+		caccount++;
+		for (int col = pt1.x; col < pt2.x; col+=cellSize) {
+			pipiount++;
+			bool found = false;
+			for (int i = row; i < row+cellSize; i++) {
+				int selectedPixel = static_cast<int>(fgMask.at<uchar>(i, row+round(cellSize/2)));
+				cv::circle(frame, cv::Point(i, row+round(cellSize/2)), 5, cv::Scalar(255, 0, 0), -1);
+				if (selectedPixel == 255) {
+					cv::circle(frame, cv::Point(i, col+round(cellSize/2)), 20, cv::Scalar(255, 0, 0), -1);
+					std::cout << static_cast<cv::Point3d>(frame.at<uchar>(i, col+round(cellSize/2))) << std::endl;
+					found = true;
+					showImg(frame);
+					return 0;
+				}
+			}
+
+			if(!found) {
+				for (int i = col; i < col+cellSize; i++) {
+					int selectedPixel = static_cast<int>(fgMask.at<uchar>(i, row+round(cellSize/2)));
+					cv::circle(frame, cv::Point(i, col+round(cellSize/2)), 5, cv::Scalar(255, 0, 0), -1);
+					if (selectedPixel == 255) {
+						cv::circle(frame, cv::Point(i, row+round(cellSize/2)), 20, cv::Scalar(255, 0, 0), -1);
+						std::cout << static_cast<cv::Point>(frame.at<uchar>(i, row+round(cellSize/2))) << std::endl;
+						found = true;
+						showImg(frame);
+						return 0;
+					}
+				}
+			}
+
+		}
+	}
 
     return 0;
 }
