@@ -70,6 +70,7 @@ int getDim(cv::Mat img, bool dirX, cv::Point pt) {
 }
 
 
+// ! funziona me è sus
 void findElementsInLine(cv::Mat img, int start1, int start2, int end1, int end2, int cellSize, int offsetX, int offsetY) {
 
 	int halfCellSize = cellSize / 2;
