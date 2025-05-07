@@ -17,10 +17,10 @@
 // TODO: cv::createBackgroundSubtractorMOG2() or cv::createBackgroundSubtractorKNN()
 
 // * images loaded in cv::Mat data structures
-cv::Mat background = cv::imread("../imgs/background.jpg");
-cv::Mat frame2 = cv::imread("../imgs/backgroundGridPiedini.png");
-cv::Mat frame = cv::imread("../imgs/backgroundGridPiedini2.png");
-cv::Mat backgroundGrid = cv::imread("../imgs/backgroundGrid.png");
+cv::Mat background = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/background.jpg");
+cv::Mat frame2 = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/backgroundGridPiedini.png");
+cv::Mat frame = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/backgroundGridPiedini2.png");
+cv::Mat backgroundGrid = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/backgroundGrid.png");
 
 
 // * temporal struct to record the info about a pawn on screen
@@ -46,8 +46,6 @@ int getDim(cv::Mat img, bool dirX, cv::Point pt) {
 	int count = 0;
 	int length = dirX ? img.cols : img.rows; 
 
-	cv::Mat copy = img;
-
 	int x = pt.x + cellShift;
 	int y = pt.y + cellShift;
 
@@ -57,7 +55,7 @@ int getDim(cv::Mat img, bool dirX, cv::Point pt) {
 		int precX = x + (dirX ? i-1 : 0);
 		int precY = y + (dirX ? 0 : i-1);
 
-		if (currX > length || currY > length) break;
+		if (currX >= length || currY >= length) break;
 
 		uchar currPixel = img.at<uchar>(currY, currX);
 		uchar precPixel = img.at<uchar>(precY, precX);
