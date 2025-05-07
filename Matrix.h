@@ -1,10 +1,6 @@
 #pragma once
-
-#include <opencv2/opencv.hpp>
 #include "Preprocess.h"
 #include <vector>
-
-
 
 struct Entity{
 	cv::Vec2i screenPosition;
@@ -12,15 +8,11 @@ struct Entity{
 	cv::Vec3b color;
 };
 
-
 class Matrix {
-
     private:
         cv::Mat original;
         Preprocess preprocess;
         std::vector<Entity> entitiesVec;
-        
-
         int countRows;
         int countCols;
 
@@ -34,15 +26,12 @@ class Matrix {
         }
         ~Matrix();
 
-
-        void initPreprocess(cv::Mat original, cv::Mat background) ;
-        void preprocessEntities(cv::Mat original, cv::Mat background) ;
+        void initPreprocess(cv::Mat& original, cv::Mat& background) ;
+        void preprocessEntities(cv::Mat& original, cv::Mat& background) ;
         int getDim(bool dirX) ;
 
-
         void findElementsInLine(cv::Mat original) ;
-        void printEntitties();
-        inline std::vector<Entity> getEntities() {return entitiesVec;}
-        inline void insertEntity(Entity e) {entitiesVec.push_back(e);}
-    
+        void printEntities();
+        inline std::vector<Entity> getEntities() const {return entitiesVec;}
+        inline void insertEntity(Entity& e) {entitiesVec.push_back(e);}
 };

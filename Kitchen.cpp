@@ -28,14 +28,13 @@ void Kitchen::defineImgs() {
 
 
 // * for debug
-void Kitchen::showImg(cv::Mat img) {
+void Kitchen::showImg(cv::Mat& img) {
 	cv::imshow("Image", img);
 	cv::waitKey(0);
 }
 
 
 void Kitchen::letHimCook() {
-
 	// * 1. frame del piano di gioco
 	// -> proietta griglia
 	// * 2. frame del piano di gioco + griglia
@@ -47,8 +46,7 @@ void Kitchen::letHimCook() {
 	cooking();
 	// -> analizziamo i frame per frame
 	// cooking()
-	grid.printEntitties();
-
+	grid.printEntities();
 }
 
 
@@ -56,5 +54,4 @@ void Kitchen::cooking() {
 
 	grid.preprocessEntities(frameImage, bgGridImage);
 	grid.findElementsInLine(frameImage);
-
 }

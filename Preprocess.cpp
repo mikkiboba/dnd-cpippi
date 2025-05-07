@@ -4,7 +4,7 @@
 Preprocess::~Preprocess() {}
 
 
-void Preprocess::emptyGridMask(cv::Mat original, cv::Mat background) {
+void Preprocess::emptyGridMask(cv::Mat& original, cv::Mat& background) {
 	cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub = cv::createBackgroundSubtractorMOG2();
 
 	pBackSub->apply(background, fgMask, 1.0);
@@ -18,7 +18,7 @@ void Preprocess::emptyGridMask(cv::Mat original, cv::Mat background) {
 }
 
 
-void Preprocess::generateEntityMask(cv::Mat original, cv::Mat backgroundGridImg) {
+void Preprocess::generateEntityMask(cv::Mat& original, cv::Mat& backgroundGridImg) {
 	// * subtract the grid from the frame to show only the "physical" elements
 	cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub2 = cv::createBackgroundSubtractorMOG2();
 	pBackSub2 -> apply(backgroundGridImg, entityMask, 1.0);

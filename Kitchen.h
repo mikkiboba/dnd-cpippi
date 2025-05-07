@@ -1,10 +1,8 @@
 #pragma once
-
 #include "Matrix.h"
 
 
 class Kitchen {
-
     private:
         Matrix grid;
         cv::Mat bgColorImage;
@@ -17,11 +15,8 @@ class Kitchen {
             grid = Matrix();
         }
         ~Kitchen();
-        void showImg(cv::Mat img);
+        void showImg(cv::Mat& img);
         void defineImgs();
         void letHimCook() ;
         void cooking();
-
-
-
 };

@@ -6,7 +6,7 @@
 Matrix::~Matrix() {}
 
 
-void Matrix::printEntitties() {
+void Matrix::printEntities() {
     std::cout << "Hello?" << getEntities().size() << std::endl;
     for (const Entity& e : getEntities()) {
 		std::cout << e.gridPosition << std::endl;
@@ -14,13 +14,13 @@ void Matrix::printEntitties() {
 }
 
 
-void Matrix::initPreprocess(cv::Mat original, cv::Mat background) {
+void Matrix::initPreprocess(cv::Mat& original, cv::Mat& background) {
     preprocess.emptyGridMask(original, background);
     preprocess.generateVertices();
     
 } 
 
-void Matrix::preprocessEntities(cv::Mat original, cv::Mat background) {
+void Matrix::preprocessEntities(cv::Mat& original, cv::Mat& background) {
     preprocess.generateEntityMask(original, background);
 }
 

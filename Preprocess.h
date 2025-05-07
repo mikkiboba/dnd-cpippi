@@ -12,7 +12,6 @@ enum Colors {
 };
 
 class Preprocess {
-
 private:
 	cv::Mat fgMask; // grid mask
 	cv::Mat entityMask;
@@ -25,18 +24,18 @@ private:
 public:
 	Preprocess() {};
 	~Preprocess();
-	void emptyGridMask(cv::Mat original, cv::Mat background);
-	void generateEntityMask(cv::Mat original, cv::Mat backgroundGridImg);
+	void emptyGridMask(cv::Mat& original, cv::Mat& background);
+	void generateEntityMask(cv::Mat& original, cv::Mat& backgroundGridImg);
 	int getOffset(bool dirX);
 	void generateVertices();
 
-	inline cv::Mat const getFgMask() { return fgMask; }
-	inline cv::Mat const getEntityMask() { return entityMask; }
-	inline cv::Point const getPt1() { return pt1; }
-	inline cv::Point const getPt2() { return pt2; }
-	inline cv::Point const getPt3() { return pt3; }
-	inline cv::Point const getPt4() { return pt4; }
-
+	// i const e & velocizzano restituendo direttamente la reference senza fare copie , dovrebbere essere safe nel nostro caso
+	inline const cv::Mat& getFgMask() const { return fgMask; }   
+	inline const cv::Mat& getEntityMask() const { return entityMask; }
+	inline const cv::Point& getPt1() const { return pt1; }
+	inline const cv::Point& getPt2() const { return pt2; }
+	inline const cv::Point& getPt3() const { return pt3; }
+	inline const cv::Point& getPt4() const { return pt4; }
 
 	void preprocessFrame();
 };
