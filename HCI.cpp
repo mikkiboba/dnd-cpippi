@@ -1,10 +1,12 @@
 ﻿// HCI.cpp: definisce il punto di ingresso dell'applicazione.
 //
 #include <opencv2/opencv.hpp> 
-
+#include <filesystem>
 #include <vector>
 
 #include "HCI.h"
+#include <direct.h>
+#include<limits.h>
 
 /* 
 * notes:
@@ -17,10 +19,10 @@
 // TODO: cv::createBackgroundSubtractorMOG2() or cv::createBackgroundSubtractorKNN()
 
 // * images loaded in cv::Mat data structures
-cv::Mat background = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/background.jpg");
-cv::Mat frame2 = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/backgroundGridPiedini.png");
-cv::Mat frame = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/backgroundGridPiedini2.png");
-cv::Mat backgroundGrid = cv::imread("D:/dnd/HCIproject/dnd-cpippi/imgs/backgroundGrid.png");
+cv::Mat background = cv::imread("../../../dnd-cpippi/imgs/background.jpg");
+cv::Mat frame2 = cv::imread("../../../dnd-cpippi/imgs/backgroundGridPiedini.png");
+cv::Mat frame = cv::imread("../../../dnd-cpippi/imgs/backgroundGridPiedini2.png");
+cv::Mat backgroundGrid = cv::imread("../../../dnd-cpippi/imgs/backgroundGrid.png");
 
 
 // * temporal struct to record the info about a pawn on screen
@@ -205,6 +207,10 @@ int oldMain() {
 
 int main()
 {
+	char cwd[_MAX_PATH];
+	if (_getcwd(cwd, sizeof(cwd)) != nullptr) {
+		std::cout << cwd;
+	}
 	// * checks if the images are loaded in the system
 	// TODO: È un TEST, poi dovranno essere sostituite in qualche modo da quello che prende la webcam
 	if (background.empty() || frame.empty() || backgroundGrid.empty()) {
