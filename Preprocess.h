@@ -14,7 +14,6 @@ enum Colors {
 class Preprocess {
 
 private:
-	cv::Mat original;
 	cv::Mat fgMask; // grid mask
 	cv::Mat entityMask;
 
@@ -24,18 +23,20 @@ private:
 	cv::Point pt4;				// bottom right
 
 public:
-	Preprocess(cv::Mat& frame) {
-		original = frame;	
-	};
+	Preprocess() {};
 	~Preprocess();
-	void emptyGridMask();
+	void emptyGridMask(cv::Mat original, cv::Mat background);
+	void generateEntityMask(cv::Mat original, cv::Mat backgroundGridImg);
 	int getOffset(bool dirX);
 	void generateVertices();
-	int getDim(bool dirX);
 
 	inline cv::Mat const getFgMask() { return fgMask; }
 	inline cv::Mat const getEntityMask() { return entityMask; }
-	inline cv::Mat  const getOriginal() { return entityMask; }
+	inline cv::Point const getPt1() { return pt1; }
+	inline cv::Point const getPt2() { return pt2; }
+	inline cv::Point const getPt3() { return pt3; }
+	inline cv::Point const getPt4() { return pt4; }
+
 
 	void preprocessFrame();
 };
