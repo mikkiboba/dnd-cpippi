@@ -133,6 +133,7 @@ int getOffset(cv::Mat img, bool dirX) {
 	return 0;
 }
 
+
 int main()
 {
 	define_imgs();
@@ -172,9 +173,6 @@ int main()
 	cv::Point pt3(offsetX, 				fgMask.rows-offsetY);				// bottom left
 	cv::Point pt4(fgMask.cols-offsetX, 	fgMask.rows-offsetY);				// bottom right
 
-
-	//  ! NELLA CLASSE PREPROCESS HO MESSO DA QUI IN SU, DA QUI IN GIù VA NELLA CLASSE DELLA MATRICE
- 
 	// * get the rows and columns of the matrix
 	int countRows = getDim(fgMask, 0, pt1);
 	int countCols = getDim(fgMask, 1, pt1);
