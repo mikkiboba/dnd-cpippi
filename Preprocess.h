@@ -6,6 +6,11 @@ enum Colors {
 	GREEN,
 	BLUE,
 	YELLOW,
+	CYAN,
+	MAGENTA,
+	ORANGE,
+	GRAY,
+	PURPLE,
 	WHITE,
 	BLACK,
 	OTHER

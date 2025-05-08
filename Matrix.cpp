@@ -114,6 +114,16 @@ int Matrix::detectColor(const cv::Vec3b& color) {
         return BLUE;
     else if (r > 200 && g > 200 && b < 100)
         return YELLOW;
+    else if (g > 200 && b > 200 && r < 100)
+        return CYAN;
+    else if (r > 200 && b > 200 && g < 100)
+        return MAGENTA;
+    else if (r > 200 && g > 100 && g < 180 && b < 100)
+        return ORANGE;
+    else if (r > 100 && r < 180 && g > 100 && g < 180 && b > 100 && b < 180)
+        return GRAY;
+    else if (r > 100 && b > 100 && g < 100)
+        return PURPLE;
     else if (r > 200 && g > 200 && b > 200)
         return WHITE;
     else if (r < 50 && g < 50 && b < 50)
