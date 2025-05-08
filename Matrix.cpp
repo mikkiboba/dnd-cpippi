@@ -7,7 +7,6 @@ Matrix::~Matrix() {}
 
 
 void Matrix::printEntities() {
-    std::cout << "Hello?" << getEntities().size() << std::endl;
     for (const Entity& e : getEntities()) {
 		std::cout << e.gridPosition << std::endl;
     }

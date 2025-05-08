@@ -37,5 +37,4 @@ public:
 	inline const cv::Point& getPt3() const { return pt3; }
 	inline const cv::Point& getPt4() const { return pt4; }
 
-	void preprocessFrame();
 };
