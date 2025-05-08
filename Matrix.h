@@ -34,4 +34,5 @@ class Matrix {
         void printEntities();
         inline std::vector<Entity> getEntities() const {return entitiesVec;}
         inline void insertEntity(Entity& e) {entitiesVec.push_back(e);}
+        int detectColor(const cv::Vec3b& color);
 };

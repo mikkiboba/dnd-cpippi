@@ -1,8 +1,6 @@
 #include "Preprocess.h"
 
-
 Preprocess::~Preprocess() {}
-
 
 void Preprocess::emptyGridMask(cv::Mat& original, cv::Mat& background) {
 	cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub = cv::createBackgroundSubtractorMOG2();

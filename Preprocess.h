@@ -6,9 +6,9 @@ enum Colors {
 	GREEN,
 	BLUE,
 	YELLOW,
-	PINK,
-	ORANGE,
-	PURPLE
+	WHITE,
+	BLACK,
+	OTHER
 };
 
 class Preprocess {

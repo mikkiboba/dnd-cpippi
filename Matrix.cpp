@@ -74,6 +74,7 @@ void Matrix::findElementsInLine(cv::Mat original) {
                 cv::Vec3b pixelColor = original.at<cv::Vec3b>(row, i);
                 occupiedGridCells.insert(gridCell);
                 Entity e = {cv::Point2i(i, row), cv::Point2i(gridX, gridY), pixelColor};
+                std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
                 insertEntity(e);
             }
         }
@@ -93,8 +94,30 @@ void Matrix::findElementsInLine(cv::Mat original) {
                 cv::Vec3b pixelColor = original.at<cv::Vec3b>(i, col);
                 occupiedGridCells.insert(gridCell);
                 Entity e = {cv::Point2i(col, i), cv::Point2i(gridX, gridY), pixelColor};
+                std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
 				insertEntity(e);
             }
         }
     }
+}
+
+int Matrix::detectColor(const cv::Vec3b& color) {
+    uchar b = color[0];
+    uchar g = color[1];
+    uchar r = color[2];
+
+    if (r > 200 && g < 100 && b < 100)
+        return RED;
+    else if (g > 200 && r < 100 && b < 100)
+        return GREEN;
+    else if (b > 200 && r < 100 && g < 100)
+        return BLUE;
+    else if (r > 200 && g > 200 && b < 100)
+        return YELLOW;
+    else if (r > 200 && g > 200 && b > 200)
+        return WHITE;
+    else if (r < 50 && g < 50 && b < 50)
+        return BLACK;
+    else
+        return OTHER;
 }
