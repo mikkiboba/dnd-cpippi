@@ -31,7 +31,14 @@ void Kitchen::defineImgsFromVideo(int n) {
 		video.read(bgColorImage); 
 	}
 	if (n == 1) { 
-		cv::VideoCapture v("../../../dnd-cpippi/imgs/gridtette.mp4");
+		#if defined(_WIN32) || defined(_WIN64)
+			cv::VideoCapture v("../../../dnd-cpippi/imgs/gridtette.mp4");
+		#endif
+
+		#if defined(__APPLE__) || defined(__MACH__)
+			cv::VideoCapture v("../imgs/gridtette.mp4");
+		#endif
+
 		v.read(bgGridImage); 
 	}
 }
@@ -45,36 +52,57 @@ void Kitchen::showImg(cv::Mat& img) {
 
 
 void Kitchen::letHimCook() {
-	// * 1. frame del piano di gioco
-	// -> proietta griglia
-	// * 2. frame del piano di gioco + griglia
 	cv::Mat frame;
 	int frameCount = 0;
 	//cv::Mat state = bgColorImage; // volevo usarlo per la roba di isChanged ma poi niente
-	for (int i = 0; i < 2; i++) {
-		defineImgsFromVideo(i);
-	}
-	cv::VideoCapture v("../../../dnd-cpippi/imgs/tuttotette.mp4");
+
+	// ! queste sono funzioni di test, con il proiettore (e camera) dobbiamo dare dei segnali su quando farci ottenere quello che ci serve
+	defineImgsFromVideo(0); // bg
+	defineImgsFromVideo(1); // grid
+
+	// * -> a questo punto abbiamo il frame background e il frame con la griglia (senza altro sopra)
+
+	// * test: video continuo che viene ottenuto dalla camera quando si sta giocando
+	#if defined(_WIN32) || defined(_WIN64)
+		cv::VideoCapture v("../../../dnd-cpippi/imgs/tuttotette.mp4");
+	#endif
+
+	#if defined(__APPLE__) || defined(__MACH__)
+		cv::VideoCapture v("../imgs/tuttotette.mp4");
+	#endif
+
+	// * secondo me come primo stato è meglio mettere la grid - mikki
 	video = v;
-	v.read(frameImage);
+	//frameImage = bgGridImage;
+	frameState = bgGridImage;
 	double thresholdSmallChanges = 0.05; 
 	grid.initPreprocess(bgGridImage, bgColorImage);
+
+	// * loop over the recording
+	// ! this should be the recording of the camera
+	bool isChanged;
 	while (true) {
-		
-		video >> frame;
-		if (frame.empty()) { video.release(); break; }
-		
-		if (grid.getPreprocess().isChanged(frameImage, frame, thresholdSmallChanges)) { 
-			std::cout << "is changed" << std::endl;
+		//video >> frame;
+		//if (frame.empty()) { video.release(); break; }
+		video.read(frame);
+		if (!video.read(frame)) { video.release(); break; }
+ 
+		cv::imshow("", frameState);
+
+		isChanged = grid.getPreprocess().isChanged(frameState, frame, thresholdSmallChanges);		
+		if (isChanged) { 
+			std::cout << "changed ✅" << std::endl;
+			frameState = frame.clone();	
 			grid.preprocessEntities(frame, bgGridImage); //frameImage
 			grid.findElementsInLine(frame);
 		}
 		
 		//
 		//// Show frame number
-		std::string label = "Frame: " + std::to_string(frameCount++);
-		cv::putText(frame, label, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0, 255, 0 }, 2);
-		cv::imshow("Frame-by-Frame Viewer", frame);
+		// std::string label = "Frame: " + std::to_string(frameCount++);
+		// std::cout << "Frame " << frameCount++ << std::endl;
+		// cv::putText(frame, label, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0, 255, 0 }, 2);
+		// cv::imshow("Frame-by-Frame Viewer", frame);
 		//cv::waitKey(0);
 
 		char key = (char)cv::waitKey(30);
@@ -104,7 +132,6 @@ void Kitchen::letHimCook() {
 bool Kitchen::cooking() {
 	cv::Mat frame;
 	if (!video.read(frame)) { return true; }
-	showImg(frame);
 	grid.preprocessEntities(frame, bgGridImage); //frameImage
 	grid.findElementsInLine(frame);
 	return false;

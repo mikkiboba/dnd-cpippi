@@ -8,6 +8,7 @@ class Kitchen {
         cv::Mat bgColorImage;
         cv::Mat bgGridImage;
         cv::Mat frameImage;
+        cv::Mat frameState;
 
         cv::VideoCapture video;
     

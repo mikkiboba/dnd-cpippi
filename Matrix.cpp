@@ -16,6 +16,7 @@ void Matrix::printEntities() {
 }
 
 
+// * generate the fgMask + find the 4 vertices of the grid
 void Matrix::initPreprocess(cv::Mat& original, cv::Mat& background) {
     preprocess.emptyGridMask(original, background);
     preprocess.generateVertices();
@@ -47,7 +48,7 @@ int Matrix::getDim(bool dirX) {
 
         if (currPixel == 255 && precPixel == 0) count++;
     }
-    std::cout << (dirX ? "Number of col lines " : "Number of row lines ") << count << std::endl;
+    //std::cout << (dirX ? "Number of col lines " : "Number of row lines ") << count << std::endl;
 
     return count;
 }
@@ -77,7 +78,7 @@ void Matrix::findElementsInLine(cv::Mat original) {
                 cv::Vec3b pixelColor = original.at<cv::Vec3b>(row, i);
                 occupiedGridCells.insert(gridCell);
                 Entity e = {cv::Point2i(i, row), cv::Point2i(gridX, gridY), pixelColor};
-                std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
+                //std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
                 insertEntity(e);
             }
         }
@@ -97,7 +98,7 @@ void Matrix::findElementsInLine(cv::Mat original) {
                 cv::Vec3b pixelColor = original.at<cv::Vec3b>(i, col);
                 occupiedGridCells.insert(gridCell);
                 Entity e = {cv::Point2i(col, i), cv::Point2i(gridX, gridY), pixelColor};
-                std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
+                //std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
 				insertEntity(e);
             }
         }

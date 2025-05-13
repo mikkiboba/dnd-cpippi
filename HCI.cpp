@@ -238,7 +238,5 @@ int main()
 		circle(frame, cv::Point(e.screenPosition[0], e.screenPosition[1]), 5.0, cv::Scalar(255, 0, 255), -1, 8);
 	}
 
-	showImg(frame);
-
 	return 0;
 }

@@ -53,6 +53,10 @@ public:
 	void generateEntityMask(cv::Mat& original, cv::Mat& backgroundGridImg);
 	int getOffset(Dir direction, Side side);
 	void generateVertices();
+	void visualizeVertices();
+
+	// * test functions
+	bool isHandPresent(cv::Mat referenceFrame, cv::Mat currentFrame);
 
 	// i const e & velocizzano restituendo direttamente la reference senza fare copie , dovrebbere essere safe nel nostro caso
 	inline  cv::Mat& getFgMask()  { return fgMask; }   
