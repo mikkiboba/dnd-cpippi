@@ -49,6 +49,7 @@ bool Preprocess::isChanged(cv::Mat& referenceFrame, cv::Mat& currentFrame, doubl
 	double totalPixels = thresh.rows * thresh.cols;
 	double changeRatio = changedPixels / totalPixels; 
 
+
 	if (changeRatio > threshold && changeRatio < 0.1) {
 		std::cout << "CHANGED % -> " << changeRatio << std::endl; 
 		return true;
