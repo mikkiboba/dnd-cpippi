@@ -3,7 +3,10 @@
 #include <opencv2/opencv.hpp>
 
 
-Matrix::~Matrix() {}
+Matrix::~Matrix() {
+    entitiesVec.clear();
+    occupiedGridCells.clear();
+}
 
 
 void Matrix::printEntities() {
@@ -52,12 +55,12 @@ int Matrix::getDim(bool dirX) {
 void Matrix::findElementsInLine(cv::Mat original) {
     // * hor and ver length of the grid 
 
-    int hLen = preprocess.getFgMask().cols - (2*preprocess.getOffset(1));
-    int vLen = preprocess.getFgMask().rows - (2*preprocess.getOffset(0));
+    int hLen = preprocess.getFgMask().cols - (preprocess.getOffsetXL() + preprocess.getOffsetXR());
+    int vLen = preprocess.getFgMask().rows - (preprocess.getOffsetYT() + preprocess.getOffsetYB());
 
     // * size of a cell
     countCols = getDim(1);
-
+    getDim(0);
 
     int cellSize = hLen / countCols;
     int halfCellSize = cellSize / 2;
@@ -66,8 +69,8 @@ void Matrix::findElementsInLine(cv::Mat original) {
     for (int row = preprocess.getPt1().y + halfCellSize; row < preprocess.getPt3().y; row += cellSize) {
         for (int i = preprocess.getPt1().x; i < preprocess.getPt2().x; i++) {
             uchar currPixel = preprocess.getEntityMask().at<uchar>(row, i);
-            int gridX = std::ceil(static_cast<double>((i - preprocess.getOffset(1))) / cellSize);
-            int gridY = std::ceil(static_cast<double>((row - preprocess.getOffset(0))) / cellSize);
+            int gridX = std::ceil(static_cast<double>((i - preprocess.getOffsetXL())) / cellSize);
+            int gridY = std::ceil(static_cast<double>((row - preprocess.getOffsetYT())) / cellSize);
             std::pair<int, int> gridCell(gridX, gridY);
             if (occupiedGridCells.count(gridCell)) continue;
             if (currPixel == 255) {
@@ -84,8 +87,8 @@ void Matrix::findElementsInLine(cv::Mat original) {
         for (int i = preprocess.getPt1().y; i < preprocess.getPt3().y; i++) {
             uchar currPixel = preprocess.getEntityMask().at<uchar>(i, col);
 
-            int gridX = std::ceil(static_cast<double>(col - preprocess.getOffset(1)) / cellSize);
-            int gridY = std::ceil(static_cast<double>(i - preprocess.getOffset(0)) / cellSize);
+            int gridX = std::ceil(static_cast<double>(col - preprocess.getOffsetXL()) / cellSize);
+            int gridY = std::ceil(static_cast<double>(i - preprocess.getOffsetYT()) / cellSize);
             std::pair<int, int> gridCell(gridX, gridY);
 
             if (occupiedGridCells.count(gridCell)) continue;

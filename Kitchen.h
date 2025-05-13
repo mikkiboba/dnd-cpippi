@@ -8,15 +8,24 @@ class Kitchen {
         cv::Mat bgColorImage;
         cv::Mat bgGridImage;
         cv::Mat frameImage;
+
+        cv::VideoCapture video;
     
     public:
-        Kitchen() {
-            defineImgs();
-            grid = Matrix();
+        Kitchen() 
+            : grid() {
+            defineImgs(true);
+        }
+
+        Kitchen(cv::VideoCapture& vid) 
+            : video(vid), grid() {
+            //defineImgs(false);
+            //video.read(bgColorImage);
         }
         ~Kitchen();
         void showImg(cv::Mat& img);
-        void defineImgs();
+        void defineImgs(bool quack);
+        void defineImgsFromVideo(int n);
         void letHimCook() ;
-        void cooking();
+        bool cooking();
 };
