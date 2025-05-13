@@ -126,9 +126,9 @@ void Preprocess::generateVertices() {
 	// * get the four points of the rectangle (grid)
 	// ! it should be calculated just once on the grid-only frame
 	pt1 = cv::Point(offsetXL, offsetYT);							 // top left
-	pt2 = cv::Point(fgMask.cols - offsetXR, offsetYB);				 // top right
-	pt3 = cv::Point(offsetXL, fgMask.rows - offsetYB);				 // bottom left
-	pt4 = cv::Point(fgMask.cols - offsetXR, fgMask.rows - offsetYB); // bottom right
+	pt2 = cv::Point(offsetXR, offsetYT);				 // top right
+	pt3 = cv::Point(offsetXL, offsetYB);				 // bottom left
+	pt4 = cv::Point(offsetXR, offsetYB); // bottom right
 
 	cv::circle(fgMask, pt1, 10, cv::Scalar(150));
 	cv::circle(fgMask, pt4, 10, cv::Scalar(60));

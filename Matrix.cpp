@@ -55,8 +55,8 @@ int Matrix::getDim(bool dirX) {
 void Matrix::findElementsInLine(cv::Mat original) {
     // * hor and ver length of the grid 
 
-    int hLen = preprocess.getFgMask().cols - (preprocess.getOffsetXL() + preprocess.getOffsetXR());
-    int vLen = preprocess.getFgMask().rows - (preprocess.getOffsetYT() + preprocess.getOffsetYB());
+    int hLen = preprocess.getOffsetXR() - preprocess.getOffsetXL();//preprocess.getFgMask().cols - (preprocess.getOffsetXL() + preprocess.getOffsetXR());
+    int vLen = preprocess.getOffsetYB() - preprocess.getOffsetYT();//preprocess.getFgMask().rows - (preprocess.getOffsetYT() + preprocess.getOffsetYB());
 
     // * size of a cell
     countCols = getDim(1);

@@ -75,7 +75,7 @@ void Kitchen::letHimCook() {
 		std::string label = "Frame: " + std::to_string(frameCount++);
 		cv::putText(frame, label, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0, 255, 0 }, 2);
 		cv::imshow("Frame-by-Frame Viewer", frame);
-		cv::waitKey(0);
+		//cv::waitKey(0);
 
 		char key = (char)cv::waitKey(30);
 		if (key == 27 || key == 'q') break; // ESC or 'q' to quit
