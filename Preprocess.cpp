@@ -42,7 +42,7 @@ bool Preprocess::isChanged(cv::Mat& referenceFrame, cv::Mat& currentFrame, doubl
 	cv::morphologyEx(thresh, thresh, cv::MORPH_OPEN, kernel);
 	cv::morphologyEx(thresh, thresh, cv::MORPH_CLOSE, kernel);
 
-		cv::imshow("",thresh);
+	cv::imshow("",thresh);
 
 
 	double changedPixels = cv::countNonZero(thresh);
