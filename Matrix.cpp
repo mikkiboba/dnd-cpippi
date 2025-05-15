@@ -24,10 +24,11 @@ void Matrix::initPreprocess(cv::Mat& original, cv::Mat& background) {
 
 void Matrix::preprocessEntities(cv::Mat& original, cv::Mat& background) {
     preprocess.generateEntityMask(original, background);
+    
 }
 
 int Matrix::getDim(bool dirX) {
-    int cellShift = 20;
+    int cellShift = 0;
     int count = 0;
     int length = dirX ? preprocess.getFgMask().cols : preprocess.getFgMask().rows;
 
@@ -76,7 +77,7 @@ void Matrix::findElementsInLine(cv::Mat original) {
             if (currPixel == 255) {
                 cv::Vec3b pixelColor = original.at<cv::Vec3b>(row, i);
                 occupiedGridCells.insert(gridCell);
-                Entity e = {cv::Point2i(i, row), cv::Point2i(gridX, gridY), pixelColor};
+                Entity e = { cv::Point2i(i, row), cv::Point2i(gridX, gridY), pixelColor };
                 std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
                 insertEntity(e);
             }
@@ -96,12 +97,49 @@ void Matrix::findElementsInLine(cv::Mat original) {
             if (currPixel == 255) {
                 cv::Vec3b pixelColor = original.at<cv::Vec3b>(i, col);
                 occupiedGridCells.insert(gridCell);
-                Entity e = {cv::Point2i(col, i), cv::Point2i(gridX, gridY), pixelColor};
+                Entity e = { cv::Point2i(col, i), cv::Point2i(gridX, gridY), pixelColor };
                 std::cout << "Color of entity in " << e.gridPosition << " = " << detectColor(pixelColor) << std::endl;
-				insertEntity(e);
+                insertEntity(e);
             }
         }
     }
+    for (int x = preprocess.getOffsetXL(); x <= preprocess.getOffsetXR(); x += cellSize) {
+        cv::line(original, cv::Point(x, preprocess.getOffsetYT()), cv::Point(x, preprocess.getOffsetYB()), cv::Scalar(0, 255, 0), 1);
+    }
+
+    // Draw horizontal grid lines
+    for (int y = preprocess.getOffsetYT(); y <= preprocess.getOffsetYB(); y += cellSize) {
+        cv::line(original, cv::Point(preprocess.getOffsetXL(), y), cv::Point(preprocess.getOffsetXR(), y), cv::Scalar(0, 255, 0), 1);
+    }
+
+    cv::rectangle(original, preprocess.getPt1(), preprocess.getPt4(), cv::Scalar(255, 0, 0), 5);
+
+    cv::imshow("grr", original);
+    cv::waitKey(0);
+}
+
+
+void Matrix::drawGrid(cv::Mat& img) {
+
+    int hLen = preprocess.getOffsetXR() - preprocess.getOffsetXL();
+    countCols = getDim(1);
+    
+
+    int cellSize = hLen / countCols;
+
+    for (int x = preprocess.getOffsetXL(); x <= preprocess.getOffsetXR(); x += cellSize) {
+        cv::line(original, cv::Point(x, preprocess.getOffsetYT()), cv::Point(x, preprocess.getOffsetYB()), cv::Scalar(0, 255, 0), 1);
+    }
+
+    // Draw horizontal grid lines
+    for (int y = preprocess.getOffsetYT(); y <= preprocess.getOffsetYB(); y += cellSize) {
+        cv::line(original, cv::Point(preprocess.getOffsetXL(), y), cv::Point(preprocess.getOffsetXR(), y), cv::Scalar(0, 255, 0), 1);
+    }
+
+    cv::rectangle(original, preprocess.getPt1(), preprocess.getPt4(), cv::Scalar(255, 0, 0), 5);
+
+
+
 }
 
 int Matrix::detectColor(const cv::Vec3b& color) {

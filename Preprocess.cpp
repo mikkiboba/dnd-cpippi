@@ -4,13 +4,9 @@ Preprocess::~Preprocess() {}
 
 bool Preprocess::isChanged(cv::Mat& referenceFrame, cv::Mat& currentFrame, double threshold) {
 
-	//emptyGridMask(referenceFrame, currentFrame);
 	cv::Mat gray1, gray2;
 	cv::cvtColor(referenceFrame, gray1, cv::COLOR_BGR2GRAY);
 	cv::cvtColor(currentFrame, gray2, cv::COLOR_BGR2GRAY);
-
-	////cv::imshow("gray1", gray1);
-	////cv::imshow("gray2",gray2);
 
 	cv::GaussianBlur(gray1, gray1, cv::Size(5, 5), 0);
 	cv::GaussianBlur(gray2, gray2, cv::Size(5, 5), 0);
@@ -22,19 +18,15 @@ bool Preprocess::isChanged(cv::Mat& referenceFrame, cv::Mat& currentFrame, doubl
 	//// Threshold the difference
 	cv::Mat thresh;
 	cv::threshold(diff, thresh, 25, 255, cv::THRESH_BINARY);
-	//::imshow("diff", diff);
-	/*cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub = cv::createBackgroundSubtractorMOG2();
-
-	pBackSub->apply(gray1, thresh, 1.0);
-	pBackSub->apply(gray2, thresh, 0.0);*/
-
+	
+	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+	cv::morphologyEx(thresh, thresh, cv::MORPH_OPEN, kernel);
+	cv::morphologyEx(thresh, thresh, cv::MORPH_CLOSE, kernel);
 	double changedPixels = cv::countNonZero(thresh);
 	double totalPixels = thresh.rows * thresh.cols;
 	double changeRatio = changedPixels / totalPixels; 
 	//cv::threshold(fgMask, fgMask, 100, 255, cv::THRESH_BINARY);
-	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
-	cv::morphologyEx(thresh, thresh, cv::MORPH_OPEN, kernel);
-	cv::morphologyEx(thresh, thresh, cv::MORPH_CLOSE, kernel);
+	
 	std::cout << "CHANGED % -> " << changeRatio << std::endl; 
 	//cv::imshow("diff ", thresh);
 	if (changeRatio > threshold && changeRatio < 0.8) {
@@ -48,16 +40,13 @@ bool Preprocess::isChanged(cv::Mat& referenceFrame, cv::Mat& currentFrame, doubl
 }
 
 void Preprocess::emptyGridMask(cv::Mat& original, cv::Mat& background) {
-	//cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub = cv::createBackgroundSubtractorMOG2();
-
-	//pBackSub->apply(background, fgMask, 1.0);
-	//pBackSub->apply(original, fgMask, 0.0);
 
 	//// * remove noise from the masked image
 	//cv::threshold(fgMask, fgMask, 100, 255, cv::THRESH_BINARY);
 	//cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
 	//cv::morphologyEx(fgMask, fgMask, cv::MORPH_OPEN, kernel);
 	//cv::morphologyEx(fgMask, fgMask, cv::MORPH_CLOSE, kernel);
+	
 	cv::Mat gray1, gray2;
 	cv::cvtColor(background, gray1, cv::COLOR_BGR2GRAY);
 	cv::cvtColor(original, gray2, cv::COLOR_BGR2GRAY);
@@ -70,6 +59,8 @@ void Preprocess::emptyGridMask(cv::Mat& original, cv::Mat& background) {
 
 	//// Absolute difference
 	cv::Mat diff;
+	std::cout << "dim" << gray1.cols << " , " << gray1.rows << std::endl;
+	std::cout << "dim" << gray2.cols << " , " << gray2.rows << std::endl;
 	cv::absdiff(gray1, gray2, diff);
 
 	//// Threshold the difference
@@ -82,10 +73,6 @@ void Preprocess::emptyGridMask(cv::Mat& original, cv::Mat& background) {
 
 void Preprocess::generateEntityMask(cv::Mat& original, cv::Mat& backgroundGridImg) {
 	
-	/*cv::Ptr<cv::BackgroundSubtractorMOG2> pBackSub2 = cv::createBackgroundSubtractorMOG2();
-	pBackSub2 -> apply(backgroundGridImg, entityMask, 1.0);
-	pBackSub2 -> apply(original, entityMask, 0.0);*/
-	
 	cv::Mat diffBGR, diffGray, mask;
 
 	// Absolute difference across all 3 color channels
@@ -95,8 +82,7 @@ void Preprocess::generateEntityMask(cv::Mat& original, cv::Mat& backgroundGridIm
 	cv::threshold(diffGray, entityMask, 30, 255, cv::THRESH_BINARY);
 	cv::morphologyEx(entityMask, entityMask, cv::MORPH_OPEN, cv::Mat(), cv::Point(-1, -1), 1);
 
-	cv::imshow("tette mask", diffGray);
-
+	cv::imshow("tette mask", entityMask);
 }
 
 
@@ -135,7 +121,67 @@ void Preprocess::generateVertices() {
 	cv::circle(fgMask, pt2, 10, cv::Scalar(100));
 	cv::circle(fgMask, pt3, 10, cv::Scalar(20));
 
-	cv::imshow("AAAAAAAA", fgMask);
+
+
+	cv::imshow("mask + vertices", fgMask);
 }
+
+ // your tracked pixels
+
+std::vector<cv::Point2f> pointsNext;
+std::vector<uchar> status;
+std::vector<float> err;
+std::vector<cv::Point2f> updatedPoints;
+
+void Preprocess::trackVertices(cv::Mat& reference, cv::Mat& frame) {
+	std::vector<cv::Point2f> pointsPrev = {
+	cv::Point2f(pt1), cv::Point2f(pt2), cv::Point2f(pt3), cv::Point2f(pt4)
+	};
+
+	cv::Mat REFGRAY;
+	cv::Mat FRAMEGRAY;
+	cv::cvtColor(reference, REFGRAY, cv::COLOR_BGR2GRAY);
+	cv::cvtColor(frame, FRAMEGRAY, cv::COLOR_BGR2GRAY);
+
+	cv::calcOpticalFlowPyrLK(REFGRAY, FRAMEGRAY, pointsPrev, pointsNext, status, err);
+
+	for (size_t i = 0; i < pointsPrev.size(); ++i) {
+		if (status[i]) {
+			updatedPoints.push_back(pointsNext[i]);
+			cv::arrowedLine(frame, pointsPrev[i], pointsNext[i], cv::Scalar(255), 4);
+		}
+	}
+}
+
+
+
+
+
+	//cv::Point2f totalDisplacement(0, 0);
+	//int count = 0;
+
+	//for (size_t i = 0; i < pointsPrev.size(); ++i) {
+	//	if (status[i]) {
+	//		cv::Point2f diff = pointsNext[i] - pointsPrev[i];
+	//		totalDisplacement += diff;
+	//		count++;
+	//	}
+	//}
+
+	//cv::Point2f avgMotion(0, 0);
+	//if (count > 0)
+	//	avgMotion = totalDisplacement * (1.0f / count);
+
+	//cv::Mat translated;
+	//cv::Mat translationMat = (cv::Mat_<double>(2, 3) <<
+	//	1, 0, avgMotion.x,
+	//	0, 1, avgMotion.y
+	//	);
+
+	//cv::warpAffine(frame, translated, translationMat, frame.size());
+	//
+	//generateEntityMask(frame, translated);	
+	//cv::imshow("mov", frame);
+	//cv::waitKey(1); 
 
 

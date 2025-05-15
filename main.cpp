@@ -2,7 +2,7 @@
 
 int main() {
 
-    cv::VideoCapture cap("../../../dnd-cpippi/imgs/bgtette.mp4"); // open the video file
+    cv::VideoCapture cap("../../../dnd-cpippi/imgs/tettecartaBG.mp4"); // open the video file
     if (!cap.isOpened())  // check if we succeeded
         std::cerr << "Can not open Video file" << std::endl;
     else std::cout << "Video opened " << std::endl;

@@ -31,6 +31,7 @@ class Matrix {
         int getDim(bool dirX) ;
 
         void findElementsInLine(cv::Mat original) ;
+        void drawGrid(cv::Mat& img);
         void printEntities();
         inline std::vector<Entity> getEntities() const {return entitiesVec;}
         inline void insertEntity(Entity& e) {entitiesVec.push_back(e);}

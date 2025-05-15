@@ -66,7 +66,7 @@ public:
 	inline const int& getOffsetXR() const { return offsetXR; }
 	inline const int& getOffsetYT() const { return offsetYT; }
 	inline const int& getOffsetYB() const { return offsetYB; }
-
+	void trackVertices(cv::Mat& reference, cv::Mat& frame);
 
 	void stab();
 

@@ -31,7 +31,7 @@ void Kitchen::defineImgsFromVideo(int n) {
 		video.read(bgColorImage); 
 	}
 	if (n == 1) { 
-		cv::VideoCapture v("../../../dnd-cpippi/imgs/gridtette.mp4");
+		cv::VideoCapture v("../../../dnd-cpippi/imgs/tettecartaGRID.mp4");
 		v.read(bgGridImage); 
 	}
 }
@@ -54,7 +54,7 @@ void Kitchen::letHimCook() {
 	for (int i = 0; i < 2; i++) {
 		defineImgsFromVideo(i);
 	}
-	cv::VideoCapture v("../../../dnd-cpippi/imgs/tuttotette.mp4");
+	cv::VideoCapture v("../../../dnd-cpippi/imgs/tuttotettecarta.mp4");
 	video = v;
 	v.read(frameImage);
 	double thresholdSmallChanges = 0.05; 
@@ -68,12 +68,15 @@ void Kitchen::letHimCook() {
 			std::cout << "is changed" << std::endl;
 			grid.preprocessEntities(frame, bgGridImage); //frameImage
 			grid.findElementsInLine(frame);
+			grid.getPreprocess().trackVertices(bgGridImage, frame);
+			grid.drawGrid(frame);
 		}
 		
 		//
 		//// Show frame number
 		std::string label = "Frame: " + std::to_string(frameCount++);
 		cv::putText(frame, label, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0, 255, 0 }, 2);
+		
 		cv::imshow("Frame-by-Frame Viewer", frame);
 		//cv::waitKey(0);
 
