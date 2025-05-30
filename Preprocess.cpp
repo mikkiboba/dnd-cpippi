@@ -148,54 +148,12 @@ void Preprocess::generateVertices() {
 
 
 	// * get the four points of the rectangle (grid)
-<<<<<<< Updated upstream
-=======
-	// ! it should be calculated just once on the grid-only frame
->>>>>>> Stashed changes
 	pt1 = cv::Point(offsetXL, offsetYT);	// top left
 	pt2 = cv::Point(offsetXR, offsetYT);	// top right
 	pt3 = cv::Point(offsetXL, offsetYB);	// bottom left
 	pt4 = cv::Point(offsetXR, offsetYB); 	// bottom right
 
-<<<<<<< Updated upstream
 	// visualizeVertices()
-=======
-	/*cv::circle(fgMask, pt1, 10, cv::Scalar(150));
-	cv::circle(fgMask, pt4, 10, cv::Scalar(60));
-	cv::circle(fgMask, pt2, 10, cv::Scalar(100));
-	cv::circle(fgMask, pt3, 10, cv::Scalar(20));*/
-
-
-
-	// cv::imshow("mask + vertices", fgMask);
-}
-
- // your tracked pixels
-
-std::vector<cv::Point2f> pointsNext;
-std::vector<uchar> status;
-std::vector<float> err;
-std::vector<cv::Point2f> updatedPoints;
-
-void Preprocess::trackVertices(cv::Mat& reference, cv::Mat& frame) {
-	std::vector<cv::Point2f> pointsPrev = {
-	cv::Point2f(pt1), cv::Point2f(pt2), cv::Point2f(pt3), cv::Point2f(pt4)
-	};
-
-	cv::Mat REFGRAY;
-	cv::Mat FRAMEGRAY;
-	cv::cvtColor(reference, REFGRAY, cv::COLOR_BGR2GRAY);
-	cv::cvtColor(frame, FRAMEGRAY, cv::COLOR_BGR2GRAY);
-
-	cv::calcOpticalFlowPyrLK(REFGRAY, FRAMEGRAY, pointsPrev, pointsNext, status, err);
-
-	for (size_t i = 0; i < pointsPrev.size(); ++i) {
-		if (status[i]) {
-			updatedPoints.push_back(pointsNext[i]);
-			cv::arrowedLine(frame, pointsPrev[i], pointsNext[i], cv::Scalar(255), 4);
-		}
-	}
->>>>>>> Stashed changes
 }
 
 

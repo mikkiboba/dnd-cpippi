@@ -87,7 +87,6 @@ void aaaa() {
 
 int main() {
 
-<<<<<<< Updated upstream
     // * TEST: background image definition
 	#if defined(_WIN32) || defined(_WIN64)
         cv::VideoCapture cap("../../../dnd-cpippi/imgs/bgtette.mp4"); // open the video file
@@ -98,20 +97,6 @@ int main() {
 	#endif
 
     if (!cap.isOpened()) {  // check if we succeeded
-=======
-    boobs();
-
-    return 0;
-
-    #if defined(_WIN32) || defined(_WIN64)
-        cv::VideoCapture cap("../../../dnd-cpippi/imgs/tetteBG.mp4");
-    #endif
-    #if defined(__APPLE__) || defined(__MACH__)
-        cv::VideoCapture cap("../imgs/tetteBG.mp4");
-    #endif
-
-    if (!cap.isOpened())  // check if we succeeded
->>>>>>> Stashed changes
         std::cerr << "Can not open Video file" << std::endl;
         return -1;
     }
