@@ -16,13 +16,8 @@ void Matrix::printEntities() {
 }
 
 
-<<<<<<< Updated upstream
 // * generate the fgMask + find the 4 vertices of the grid
 void Matrix::initPreprocess(cv::Mat& original, cv::Mat& background) {
-=======
-void Matrix::initPreprocess(cv::Mat& originalm, cv::Mat& background) {
-    original = originalm;
->>>>>>> Stashed changes
     preprocess.emptyGridMask(original, background);
     preprocess.generateVertices();
     
@@ -108,46 +103,6 @@ void Matrix::findElementsInLine(cv::Mat original) {
             }
         }
     }
-<<<<<<< Updated upstream
-=======
-    for (int x = preprocess.getOffsetXL(); x <= preprocess.getOffsetXR(); x += cellSize) {
-        cv::line(original, cv::Point(x, preprocess.getOffsetYT()), cv::Point(x, preprocess.getOffsetYB()), cv::Scalar(0, 255, 0), 1);
-    }
-
-    // Draw horizontal grid lines
-    for (int y = preprocess.getOffsetYT(); y <= preprocess.getOffsetYB(); y += cellSize) {
-        cv::line(original, cv::Point(preprocess.getOffsetXL(), y), cv::Point(preprocess.getOffsetXR(), y), cv::Scalar(0, 255, 0), 1);
-    }
-
-    cv::rectangle(original, preprocess.getPt1(), preprocess.getPt4(), cv::Scalar(255, 0, 0), 5);
-
-    // cv::imshow("grr", original);
-    cv::waitKey(0);
-}
-
-
-void Matrix::drawGrid(cv::Mat& img) {
-
-    int hLen = preprocess.getOffsetXR() - preprocess.getOffsetXL();
-    countCols = getDim(1);
-    
-
-    int cellSize = hLen / countCols;
-
-    for (int x = preprocess.getOffsetXL(); x <= preprocess.getOffsetXR(); x += cellSize) {
-        cv::line(original, cv::Point(x, preprocess.getOffsetYT()), cv::Point(x, preprocess.getOffsetYB()), cv::Scalar(0, 255, 0), 1);
-    }
-
-    // Draw horizontal grid lines
-    for (int y = preprocess.getOffsetYT(); y <= preprocess.getOffsetYB(); y += cellSize) {
-        cv::line(original, cv::Point(preprocess.getOffsetXL(), y), cv::Point(preprocess.getOffsetXR(), y), cv::Scalar(0, 255, 0), 1);
-    }
-
-    cv::rectangle(original, preprocess.getPt1(), preprocess.getPt4(), cv::Scalar(255, 0, 0), 5);
-
-
-
->>>>>>> Stashed changes
 }
 
 int Matrix::detectColor(const cv::Vec3b& color) {

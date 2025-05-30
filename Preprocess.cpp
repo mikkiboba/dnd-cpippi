@@ -88,16 +88,9 @@ void Preprocess::emptyGridMask(cv::Mat& original, cv::Mat& background) {
 
 	//// Threshold the difference
 	cv::Mat thresh;
-<<<<<<< Updated upstream
 	cv::threshold(diff, thresh, 35, 255, cv::THRESH_BINARY); 	// ho aumentato il threshol da 25 a 35 - mikki
 	fgMask = thresh;
 	
-=======
-	cv::threshold(diff, thresh, 25, 255, cv::THRESH_BINARY);
-	cv::morphologyEx(thresh, thresh, cv::MORPH_OPEN, cv::Mat(), cv::Point(-1, -1), 1);
-
-	fgMask = thresh;
->>>>>>> Stashed changes
 	// cv::imshow("EMPTY GRID MASK", fgMask);
 }
 
