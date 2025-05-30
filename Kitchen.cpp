@@ -32,11 +32,18 @@ void Kitchen::defineImgsFromVideo(int n) {
 	}
 	if (n == 1) { 
 		#if defined(_WIN32) || defined(_WIN64)
+<<<<<<< Updated upstream
 			cv::VideoCapture v("../../../dnd-cpippi/imgs/gridtette.mp4");
 		#endif
 
 		#if defined(__APPLE__) || defined(__MACH__)
 			cv::VideoCapture v("../imgs/gridtette.mp4");
+=======
+			cv::VideoCapture v("../../../dnd-cpippi/imgs/tetteGRID.mp4");
+		#endif
+		#if defined(__APPLE__) || defined(__MACH__)
+			cv::VideoCapture v("../imgs/tetteGRID.mp4");
+>>>>>>> Stashed changes
 		#endif
 
 		v.read(bgGridImage); 
@@ -55,6 +62,7 @@ void Kitchen::letHimCook() {
 	cv::Mat frame;
 	int frameCount = 0;
 	//cv::Mat state = bgColorImage; // volevo usarlo per la roba di isChanged ma poi niente
+<<<<<<< Updated upstream
 
 	// ! queste sono funzioni di test, con il proiettore (e camera) dobbiamo dare dei segnali su quando farci ottenere quello che ci serve
 	defineImgsFromVideo(0); // bg
@@ -72,6 +80,17 @@ void Kitchen::letHimCook() {
 	#endif
 
 	// * secondo me come primo stato è meglio mettere la grid - mikki
+=======
+	for (int i = 0; i < 2; i++) {
+		defineImgsFromVideo(i);
+	}
+	#if defined(_WIN32) || defined(_WIN64)
+		cv::VideoCapture v("../../../dnd-cpippi/imgs/tuttotette.mp4");
+	#endif
+	#if defined(__APPLE__) || defined(__MACH__)
+		cv::VideoCapture v("../imgs/tuttotette.mp4");
+	#endif
+>>>>>>> Stashed changes
 	video = v;
 	//frameImage = bgGridImage;
 	frameState = bgGridImage;
@@ -99,9 +118,15 @@ void Kitchen::letHimCook() {
 		
 		//
 		//// Show frame number
+<<<<<<< Updated upstream
 		// std::string label = "Frame: " + std::to_string(frameCount++);
 		// std::cout << "Frame " << frameCount++ << std::endl;
 		// cv::putText(frame, label, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0, 255, 0 }, 2);
+=======
+		std::string label = "Frame: " + std::to_string(frameCount++);
+		cv::putText(frame, label, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0, 255, 0 }, 2);
+		
+>>>>>>> Stashed changes
 		// cv::imshow("Frame-by-Frame Viewer", frame);
 		//cv::waitKey(0);
 

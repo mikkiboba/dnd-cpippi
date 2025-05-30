@@ -26,7 +26,7 @@ class Matrix {
         }
         ~Matrix();
 
-        void initPreprocess(cv::Mat& original, cv::Mat& background) ;
+        void initPreprocess(cv::Mat& originalm, cv::Mat& background) ;
         void preprocessEntities(cv::Mat& original, cv::Mat& background) ;
         int getDim(bool dirX) ;
 

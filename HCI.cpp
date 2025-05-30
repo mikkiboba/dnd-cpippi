@@ -80,6 +80,9 @@ int getDim(cv::Mat img, bool dirX, cv::Point pt) {
 		uchar currPixel = img.at<uchar>(currY, currX);
 		uchar precPixel = img.at<uchar>(precY, precX);
 
+		cv::circle(img, cv::Point(currY, currX), 10, cv::Scalar(0,0,255), 5);
+		showImg(img);
+
 		if (currPixel == 255 && precPixel == 0) count++;
 	}
 	std::cout << (dirX ? "Number of col lines " : "Number of row lines ") << count << std::endl;
