@@ -4,9 +4,16 @@
 #include <opencv2/opencv.hpp>
 
 
+void showImg(cv::Mat img) {
+    cv::imshow("", img);
+    cv::waitKey(0);
+}
+
+
 void bbbb() {
 
-    cv::VideoCapture grid("../imgs/tettecartaGRID.mp4");
+    cv::VideoCapture grid("../imgs/tetteFull.mp4");
+
     cv::Mat img;
     grid.read(img);
 
@@ -49,7 +56,7 @@ void bbbb() {
 
 void aaaa() {
 
-    cv::VideoCapture grid("../imgs/tetteGRID.mp4");
+    cv::VideoCapture grid("../imgs/tetteGrid.mp4");
     cv::Mat img;
     grid.read(img);
 
@@ -80,12 +87,13 @@ void aaaa() {
     cv::imshow("", lineImg);
     cv::waitKey(0);
 
-
 }
 
 
-
 int main() {
+
+    boobs();
+    return 0;
 
     // * TEST: background image definition
 	#if defined(_WIN32) || defined(_WIN64)
