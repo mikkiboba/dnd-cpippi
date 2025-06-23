@@ -145,39 +145,103 @@ cv::Mat previousValidHoles;
 
 
 void findEntitties(cv::Mat& clothed, cv::Mat& nude) {
+    cv::Mat copy = clothed.clone();
 
+    // * convert color image to hsv to detect colors better
     cv::cvtColor(clothed, clothed, cv::COLOR_BGR2HSV);
 
-    count++;
-
+    // * set the default values
+    // ! this is done only once
     if (defaultPixelVer == 0 && defaultPixelHor == 0) {
+
+        // * vertical/horizontal number of pixels of the image
+        // ? since it's warped, they should be similar
         defaultPixelVer = nude.rows;
         defaultPixelHor = nude.cols;
 
         std::cout << "pixVer: " << defaultPixelVer << " pixHor: " << defaultPixelHor << std::endl;
 
+        // * vertical/horizontal number of pixel for a single cell
         defaultCelHor = defaultPixelHor / defaultCols;
         defaultCelVer = defaultPixelVer / defaultRows;
 
         std::cout << "celHor: " << defaultCelHor << " celVer: " << defaultCelVer << std::endl;
 
-        defaultInCelHor = defaultCelHor / 3; // ! questa è la lunghezza delle croci
+        // * horizontal/vertical number of pixel for the patch
+        defaultInCelHor = defaultCelHor / 3;
         defaultInCelVer = defaultCelVer / 3;
 
         std::cout << "inCelHor: " << defaultInCelHor << " inCelVer: " << defaultInCelVer << std::endl;
 
+        // * horizontal/vertical number of pixel for the offset
         defaultOffsetHor = (defaultCelHor - defaultInCelHor) / 2;
         defaultOffsetVer = (defaultCelVer - defaultInCelVer) / 2;
 
         std::cout << "offsetHor: " << defaultOffsetHor << " offsetVer: " << defaultOffsetVer << std::endl;
 
+        // * matrix that contains the last valid positions
+        // * this is the one we send to the app
         previousValidHoles = cv::Mat(defaultRows, defaultCols, CV_32F, TEST_NONE);
 
     }
 
+    // * matrix of the positions in the frame
     cv::Mat holes(defaultRows, defaultCols, CV_32F, TEST_NONE);
-    cv::Mat copy = clothed.clone();
 
+    // * iterations on the cells
+    for (int i = defaultCelHor / 2; i <= defaultPixelHor - (defaultCelHor / 2); i += defaultCelHor) {
+        for (int j = defaultCelVer / 2; j <= defaultPixelVer - (defaultCelVer / 2); j += defaultCelVer) {
+            
+            // * cell position
+            int currRow = j / defaultCelVer;
+            int currCol = i / defaultCelHor;
+
+            // * skips if the cell is already marked
+            if (holes.at<float>(currRow, currCol) != TEST_NONE)
+                continue;
+
+            // * iteration on the patch
+            for (int dy = -defaultInCelVer/2; dy <= defaultInCelVer/2; ++dy) {
+                for (int dx = -defaultInCelHor/2; dx <= defaultInCelHor/2; ++dx) {
+                    int x = i + dx;
+                    int y = j + dy;
+
+                    // debug: show the cells in copy
+                    cv::circle(copy, cv::Point(x, y), 1, cv::Scalar(0, 255, 0), 1);
+
+                    // * checks if it's a valid position
+                    if (x >= 0 && x < nude.cols && y >= 0 && y < nude.rows) {
+                        int nudeValue = (int)nude.at<uchar>(y, x);
+
+                        // * if there is a non-black value there must be something in the hsv image
+                        if (nudeValue != 0) {
+                            cv::Vec3b color = clothed.at<cv::Vec3b>(y, x);
+                            holes.at<float>(currRow, currCol) = detectColor(color);
+
+                            // * thanks chatgpt, i didn't know i could exit from loops like this
+                            goto nextCell;
+                        }
+                    }
+                }
+            }
+
+            nextCell:;
+        }
+    }
+
+    // * checks if the previous valid matrix is different from the current frame matrix
+    // * if different, then a change has occured and update the valid matrix
+    cv::Mat holesDiff;
+    cv::compare(previousValidHoles, holes, holesDiff, cv::CMP_NE);
+    if (cv::countNonZero(holesDiff) > 0) {
+        holes.copyTo(previousValidHoles);
+        std::cout << previousValidHoles << std::endl;
+    }
+
+    //cv::imshow("", copy);
+    //cv::waitKey(0);
+
+    /*
     for (int i = defaultCelHor/2; i <= defaultPixelHor - (defaultCelHor/2); i += defaultCelHor) {
         for (int j = defaultCelVer/2; j <= defaultPixelVer - (defaultCelVer/2); j += defaultCelVer){
 
@@ -320,9 +384,6 @@ void palleColorate(cv::Mat& img) {
     cv::imshow("Mask", mask);
     cv::waitKey(0);
 }
-
-
-
 
 
 cv::Mat elaborateFrame(cv::Mat& image) {
@@ -474,9 +535,6 @@ cv::Mat elaborateFrame(cv::Mat& image) {
             cv::morphologyEx(bra, bra, cv::MORPH_OPEN, takeItOff);
             cv::medianBlur(bra, bra, 3); // Kernel size must be odd
 
-            //cv::imshow("nudino!", bra);
-            //cv::waitKey(0);
-
             findEntitties(warped, bra);
 
         }
@@ -490,8 +548,6 @@ cv::Mat elaborateFrame(cv::Mat& image) {
 
     return image;
 }
-
-
 
 
 void boobs() {
