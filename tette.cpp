@@ -94,66 +94,185 @@ int defaultInCelVer = 0;
 int defaultOffsetHor = 0;
 int defaultOffsetVer = 0;
 
-cv::Mat holes;
+int gridRows = 0;
+int gridCols = 0;
 
-cv::Scalar defaultColor = cv::Scalar(0,0,0);
+cv::Vec3b defaultColor = cv::Vec3b(0,0,0);
+
+
+int count = 0;
+
+
+std::pair<int, int> transitionToGridCoordinates(int& x, int& y) {
+
+    int col = x / defaultCelHor;
+    int row = y / defaultCelVer;
+
+    return {row, col};
+
+}
+
+
+enum TestColors {
+    TEST_RED = 1,
+    TEST_GREEN = 2,
+    TEST_BLUE = 3,
+    TEST_OTHER = 4,
+    TEST_NONE = 0
+};
+
+int detectColor(const cv::Vec3b& hsvColor) {
+    int h = hsvColor[0];
+    int s = hsvColor[1];
+    int v = hsvColor[2];
+
+    if (s < 50 || v < 50) {
+        return TEST_NONE;  // Too gray or dark to classify
+    }
+
+    if ((h < 10) || (h > 160 && h <= 180))
+        return TEST_RED;
+    else if (h >= 35 && h < 85)
+        return TEST_GREEN;
+    else if (h >= 90 && h < 130)
+        return TEST_BLUE;
+    else
+        return TEST_OTHER;
+}
+
+
+cv::Mat previousValidHoles;
 
 
 void findEntitties(cv::Mat& clothed, cv::Mat& nude) {
+
+    cv::cvtColor(clothed, clothed, cv::COLOR_BGR2HSV);
+
+    count++;
 
     if (defaultPixelVer == 0 && defaultPixelHor == 0) {
         defaultPixelVer = nude.rows;
         defaultPixelHor = nude.cols;
 
+        std::cout << "pixVer: " << defaultPixelVer << " pixHor: " << defaultPixelHor << std::endl;
+
         defaultCelHor = defaultPixelHor / defaultCols;
         defaultCelVer = defaultPixelVer / defaultRows;
 
-        defaultInCelHor = defaultCelHor / 4;
-        defaultInCelVer = defaultCelVer / 4;
+        std::cout << "celHor: " << defaultCelHor << " celVer: " << defaultCelVer << std::endl;
+
+        defaultInCelHor = defaultCelHor / 3; // ! questa è la lunghezza delle croci
+        defaultInCelVer = defaultCelVer / 3;
+
+        std::cout << "inCelHor: " << defaultInCelHor << " inCelVer: " << defaultInCelVer << std::endl;
 
         defaultOffsetHor = (defaultCelHor - defaultInCelHor) / 2;
         defaultOffsetVer = (defaultCelVer - defaultInCelVer) / 2;
 
-        holes = cv::Mat(defaultRows, defaultCols, CV_8UC3, defaultColor);
+        std::cout << "offsetHor: " << defaultOffsetHor << " offsetVer: " << defaultOffsetVer << std::endl;
+
+        previousValidHoles = cv::Mat(defaultRows, defaultCols, CV_32F, TEST_NONE);
 
     }
 
-    int countX, countY = 0;
+    cv::Mat holes(defaultRows, defaultCols, CV_32F, TEST_NONE);
+    cv::Mat copy = clothed.clone();
 
+    for (int i = defaultCelHor/2; i <= defaultPixelHor - (defaultCelHor/2); i += defaultCelHor) {
+        for (int j = defaultCelVer/2; j <= defaultPixelVer - (defaultCelVer/2); j += defaultCelVer){
+
+            int currRow = (j / defaultCelVer);
+            int currCol = (i / defaultCelHor);
+
+            int y = j - defaultInCelVer/2;
+            while (y <= j + defaultInCelVer/2) {
+                if (holes.at<float>(currRow, currCol) != TEST_NONE)
+                    break;
+
+                if (y >= 0 && y < nude.rows && i >= 0 && i < nude.cols) {
+                    int nudeValue = (int)nude.at<uchar>(y, i);
+                    if (nudeValue != 0) {
+                        cv::Vec3b color = clothed.at<cv::Vec3b>(y, i);
+                        holes.at<float>(currRow, currCol) = detectColor(color);
+                        break;
+                    }
+                }
+
+                cv::circle(copy, cv::Point(i, y), 1, cv::Scalar(0,255,0), 1);
+                y++;
+            }
+        }
+    }
+
+    for (int j = defaultCelVer/2; j <= defaultPixelVer - (defaultCelVer/2); j += defaultCelVer){
+        for (int i = defaultCelHor/2; i <= defaultPixelHor - (defaultCelHor/2); i += defaultCelHor) {
+
+            int currRow = (j / defaultCelVer);
+            int currCol = (i / defaultCelHor);
+
+            int x = i - defaultInCelHor/2;
+            while (x <= i + defaultInCelVer/2) {
+                if (holes.at<float>(currRow, currCol) != TEST_NONE)
+                    break;
+
+                if (x >= 0 && x < nude.rows && j >= 0 && j < nude.cols) {
+                    int nudeValue = (int)nude.at<uchar>(j, x);
+                    if (nudeValue != 0) {
+                        cv::Vec3b color = clothed.at<cv::Vec3b>(j, x);
+                        //std::cout << color << std::endl;
+                        holes.at<float>(currRow, currCol) = detectColor(color);
+                        break;
+                    }
+                }
+
+                cv::circle(copy, cv::Point(x, j), 1, cv::Scalar(0,255,0), 1);
+                x++;
+            }
+        }
+    }
+
+    cv::Mat holesDiff;
+    cv::compare(previousValidHoles, holes, holesDiff, cv::CMP_NE);
+    if (cv::countNonZero(holesDiff) > 0) {
+        holes.copyTo(previousValidHoles);
+        std::cout << previousValidHoles << std::endl;
+    }
+
+
+    /*for (int i = 0; i < defaultCols; i++) {
+        for (int j = 0; j < defaultRows; j++) {
+            float c = holes.at<float>(j, i);
+            if (c != TEST_NONE)
+                std::cout << c << " (" << i << "," << j << ")" << std::endl;
+        }
+    }
+
+    
     for (int i = defaultOffsetHor; i < defaultPixelHor - defaultOffsetHor - defaultInCelHor; i += defaultInCelHor + 2*defaultOffsetHor) {
-        for (int j = defaultOffsetVer + defaultInCelVer/2; j < defaultPixelVer - defaultOffsetVer - defaultInCelHor; i += defaultInCelVer + 2*defaultOffsetVer) {
+        for (int j = defaultOffsetVer + static_cast<int>(defaultInCelVer/2); j < defaultPixelVer - defaultOffsetVer - defaultInCelHor; i += defaultInCelVer + 2*defaultOffsetVer) {
 
             bool found = false;
 
             int x = i;
             int y = j;
 
-            while (!found || holes.at<cv::Scalar>(countY, countX) != defaultColor) {
+            std::cout << x << "," << y << std::endl;
+            exit(0);
+
+            while(y <= i+defaultInCelVer && !found) {
 
                 int puntoG = nude.at<int>(y, x);
-                
+
                 if (puntoG != 0) {
                     found = true;
 
                     cv::Vec3i color = clothed.at<cv::Vec3i>(y, x);
-                    holes.at<cv::Vec3i>(y, x) = color;
-
+                    holes.at<cv::Vec3i>(y/defaultCelVer, x/defaultCelHor) = color;
                 }
-                
-                x++;
-
+                y++;
             }
-            countX++;
-
         }
-
-        bool found = false;
-
-        int y = i;
-        
-
-        countY++;
-    }
+    }*/
 }
 
 
@@ -340,8 +459,8 @@ cv::Mat elaborateFrame(cv::Mat& image) {
         }
 
 
-        std::cout << "Rows: " << rowCount << std::endl;
-        std::cout << "Cols: " << colCount << std::endl;
+        //std::cout << "Rows: " << rowCount << std::endl;
+        //std::cout << "Cols: " << colCount << std::endl;
 
 
         if (rowCount == defaultRows && colCount == defaultCols) {
@@ -355,8 +474,10 @@ cv::Mat elaborateFrame(cv::Mat& image) {
             cv::morphologyEx(bra, bra, cv::MORPH_OPEN, takeItOff);
             cv::medianBlur(bra, bra, 3); // Kernel size must be odd
 
-            cv::imshow("nudino!", bra);
-            cv::waitKey(0);
+            //cv::imshow("nudino!", bra);
+            //cv::waitKey(0);
+
+            findEntitties(warped, bra);
 
         }
 
@@ -384,8 +505,8 @@ void boobs() {
         cv::Mat uu = elaborateFrame(frame);
 
         //cv::imshow("frame", uu);
-        int key = cv::waitKey(0);
-        if (key == 'q') break;
+        //int key = cv::waitKey(0);
+        //if (key == 'q') break;
     }
 
 }
