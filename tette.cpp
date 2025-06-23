@@ -174,6 +174,7 @@ void findEntitties(cv::Mat& clothed, cv::Mat& nude) {
         std::cout << "inCelHor: " << defaultInCelHor << " inCelVer: " << defaultInCelVer << std::endl;
 
         // * horizontal/vertical number of pixel for the offset
+        // ! we dont need it anymore
         defaultOffsetHor = (defaultCelHor - defaultInCelHor) / 2;
         defaultOffsetVer = (defaultCelVer - defaultInCelVer) / 2;
 
