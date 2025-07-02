@@ -32,8 +32,7 @@ int Preprocess::detectColor(const cv::Vec3b& hsvColor) {
 
 
 void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
-    cv::Mat copy = clothed.clone();
-
+    
     // * convert color image to hsv to detect colors better
     cv::cvtColor(clothed, clothed, cv::COLOR_BGR2HSV);
 
@@ -82,6 +81,7 @@ void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
     int halfCelVer = defaultCelVer / 2;
 
     // Parallel loop
+    
     cv::parallel_for_(cv::Range(0, defaultRows * defaultCols), [&](const cv::Range& range) {
         for (int index = range.start; index < range.end; ++index) {
             int currRow = index / defaultCols;
@@ -113,15 +113,22 @@ void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
         }
     });
 
-
+    
     // * checks if the previous valid matrix is different from the current frame matrix
     // * if different, then a change has occured and update the valid matrix
+    
     cv::Mat holesDiff;
+    
     cv::compare(previousValidHoles, holes, holesDiff, cv::CMP_NE);
+    
+    
     if (cv::countNonZero(holesDiff) > 0) {
+        
+        
         holes.copyTo(previousValidHoles);
-        std::cout << previousValidHoles << std::endl;
+
     }
+    
 
     //cv::imshow("", copy);
     //cv::waitKey(0);
