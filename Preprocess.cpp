@@ -76,46 +76,43 @@ void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
     // * matrix of the positions in the frame
     cv::Mat holes(defaultRows, defaultCols, CV_32F, TEST_NONE);
 
-    // * iterations on the cells
-    for (int i = defaultCelHor / 2; i <= defaultPixelHor - (defaultCelHor / 2); i += defaultCelHor) {
-        for (int j = defaultCelVer / 2; j <= defaultPixelVer - (defaultCelVer / 2); j += defaultCelVer) {
+    int halfInVer = defaultInCelVer / 2;
+    int halfInHor = defaultInCelHor / 2;
+    int halfCelHor = defaultCelHor / 2;
+    int halfCelVer = defaultCelVer / 2;
 
-            // * cell position
-            int currRow = j / defaultCelVer;
-            int currCol = i / defaultCelHor;
+    // Parallel loop
+    cv::parallel_for_(cv::Range(0, defaultRows * defaultCols), [&](const cv::Range& range) {
+        for (int index = range.start; index < range.end; ++index) {
+            int currRow = index / defaultCols;
+            int currCol = index % defaultCols;
 
-            // * skips if the cell is already marked
+            int i = currCol * defaultCelHor + halfCelHor;
+            int j = currRow * defaultCelVer + halfCelVer;
+
             if (holes.at<float>(currRow, currCol) != TEST_NONE)
                 continue;
 
-            // * iteration on the patch
-            for (int dy = -defaultInCelVer / 2; dy <= defaultInCelVer / 2; ++dy) {
-                for (int dx = -defaultInCelHor / 2; dx <= defaultInCelHor / 2; ++dx) {
+            for (int dy = -halfInVer; dy <= halfInVer; ++dy) {
+                int y = j + dy;
+                if (y < 0 || y >= nude.rows) continue;
+
+                for (int dx = -halfInHor; dx <= halfInHor; ++dx) {
                     int x = i + dx;
-                    int y = j + dy;
+                    if (x < 0 || x >= nude.cols) continue;
 
-                    // debug: show the cells in copy
-                    cv::circle(copy, cv::Point(x, y), 1, cv::Scalar(0, 255, 0), 1);
-
-                    // * checks if it's a valid position
-                    if (x >= 0 && x < nude.cols && y >= 0 && y < nude.rows) {
-                        int nudeValue = (int)nude.at<uchar>(y, x);
-
-                        // * if there is a non-black value there must be something in the hsv image
-                        if (nudeValue != 0) {
-                            cv::Vec3b color = clothed.at<cv::Vec3b>(y, x);
-                            holes.at<float>(currRow, currCol) = detectColor(color);
-
-                            // * thanks chatgpt, i didn't know i could exit from loops like this
-                            goto nextCell;
-                        }
+                    int nudeValue = nude.at<uchar>(y, x);
+                    if (nudeValue != 0) {
+                        const cv::Vec3b& color = clothed.at<cv::Vec3b>(y, x);
+                        holes.at<float>(currRow, currCol) = detectColor(color);
+                        goto patchDone;
                     }
                 }
             }
-
-        nextCell:;
+        patchDone:;
         }
-    }
+    });
+
 
     // * checks if the previous valid matrix is different from the current frame matrix
     // * if different, then a change has occured and update the valid matrix
