@@ -117,45 +117,47 @@ void findEntitties(cv::Mat& clothed, cv::Mat& nude) {
     cv::Mat holes(defaultRows, defaultCols, CV_32F, TEST_NONE);
 
     // * iterations on the cells
-    for (int i = defaultCelHor / 2; i <= defaultPixelHor - (defaultCelHor / 2); i += defaultCelHor) {
-        for (int j = defaultCelVer / 2; j <= defaultPixelVer - (defaultCelVer / 2); j += defaultCelVer) {
-            
-            // * cell position
+    auto detectInPatch = [&](int i, int j, int currRow, int currCol) -> bool {
+    int halfInVer = defaultInCelVer / 2;
+    int halfInHor = defaultInCelHor / 2;
+
+    for (int dy = -halfInVer; dy <= halfInVer; ++dy) {
+        int y = j + dy;
+        if (y < 0 || y >= nude.rows) continue;
+
+        for (int dx = -halfInHor; dx <= halfInHor; ++dx) {
+            int x = i + dx;
+            if (x < 0 || x >= nude.cols) continue;
+
+            int nudeValue = nude.at<uchar>(y, x);
+            if (nudeValue != 0) {
+                const cv::Vec3b& color = clothed.at<cv::Vec3b>(y, x);
+                holes.at<float>(currRow, currCol) = detectColor(color);
+                return true;
+            }
+        }
+    }
+        return false;
+    };
+
+    int halfCelHor = defaultCelHor / 2;
+    int halfCelVer = defaultCelVer / 2;
+
+    for (int i = halfCelHor; i <= defaultPixelHor - halfCelHor; i += defaultCelHor) {
+        for (int j = halfCelVer; j <= defaultPixelVer - halfCelVer; j += defaultCelVer) {
             int currRow = j / defaultCelVer;
             int currCol = i / defaultCelHor;
 
-            // * skips if the cell is already marked
             if (holes.at<float>(currRow, currCol) != TEST_NONE)
                 continue;
 
-            // * iteration on the patch
-            for (int dy = -defaultInCelVer/2; dy <= defaultInCelVer/2; ++dy) {
-                for (int dx = -defaultInCelHor/2; dx <= defaultInCelHor/2; ++dx) {
-                    int x = i + dx;
-                    int y = j + dy;
+            // debug: mark cell center only once
+            cv::circle(copy, cv::Point(i, j), 1, cv::Scalar(0, 255, 0), 1);
 
-                    // debug: show the cells in copy
-                    cv::circle(copy, cv::Point(x, y), 1, cv::Scalar(0, 255, 0), 1);
-
-                    // * checks if it's a valid position
-                    if (x >= 0 && x < nude.cols && y >= 0 && y < nude.rows) {
-                        int nudeValue = (int)nude.at<uchar>(y, x);
-
-                        // * if there is a non-black value there must be something in the hsv image
-                        if (nudeValue != 0) {
-                            cv::Vec3b color = clothed.at<cv::Vec3b>(y, x);
-                            holes.at<float>(currRow, currCol) = detectColor(color);
-
-                            // * thanks chatgpt, i didn't know i could exit from loops like this
-                            goto nextCell;
-                        }
-                    }
-                }
-            }
-
-            nextCell:;
+            detectInPatch(i, j, currRow, currCol);
         }
     }
+
 
     // * checks if the previous valid matrix is different from the current frame matrix
     // * if different, then a change has occured and update the valid matrix
