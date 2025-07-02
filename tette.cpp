@@ -72,11 +72,27 @@ cv::Mat thiccThighs(cv::Mat& frame, cv::Mat& backgroundGridImg) {
 
 
 void defineMedia() {
-    bgVid = cv::VideoCapture("../imgs/bgtette.mp4");
+    
+    #if defined(_WIN32) || defined(_WIN64)
+        bgVid = cv::VideoCapture("../../../dnd-cpippi/imgs/bgtette.mp4");
+    #endif
+    #if defined(__APPLE__) || defined(__MACH__)
+        bgVid = cv::VideoCapture("../imgs/bgtette.mp4");
+    #endif
     bgVid.read(frameBg);
-    gridVid = cv::VideoCapture("../imgs/tetteGrid.mp4");
+    #if defined(_WIN32) || defined(_WIN64)
+        gridVid = cv::VideoCapture("../../../dnd-cpippi/imgs/tetteGrid.mp4");
+    #endif
+    #if defined(__APPLE__) || defined(__MACH__)
+        gridVid = cv::VideoCapture("../imgs/tetteGrid.mp4");
+    #endif
     gridVid.read(frameGrid);
-    loopVid = cv::VideoCapture("../imgs/tetteFull.mp4");
+    #if defined(_WIN32) || defined(_WIN64)
+        loopVid = cv::VideoCapture("../../../dnd-cpippi/imgs/tetteFull.mp4");
+    #endif
+    #if defined(__APPLE__) || defined(__MACH__)
+        loopVid = cv::VideoCapture("../imgs/tetteFull.mp4");
+    #endif
 }
 
 int defaultRows = -1;
