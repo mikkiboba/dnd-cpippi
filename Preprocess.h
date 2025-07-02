@@ -1,16 +1,20 @@
 #pragma once
 #include <opencv2/opencv.hpp> 
 #include <chrono>
-enum TestColors {
-	TEST_RED = 1,
-	TEST_GREEN = 2,
-	TEST_BLUE = 3,
-	TEST_OTHER = 4,
-	TEST_NONE = 0
-};
+
 
 
 class Preprocess {
+
+public:
+	enum class Color : int {
+		NONE 	= 0,
+		RED		= 1,
+		GREEN	= 2,
+		BLUE	= 3,
+		OTHER	= 4
+	};
+
 private:
 	cv::VideoCapture loopVid;
 
@@ -37,7 +41,7 @@ private:
 
 
 	int count = 0;
-	cv::Mat previousValidHoles;
+	cv::Mat currentMatrix;
 
 	
 
@@ -46,10 +50,23 @@ public:
 	~Preprocess();
 
 	void defineMedia();
-	int detectColor(const cv::Vec3b& hsvColor);
-	void findEntitties(cv::Mat& clothed, cv::Mat& nude);
+	void initializeDefaults(const cv::Mat& img);
+	void run();
+
+	Color detectColor(const cv::Vec3b& hsvColor);
+
+	void findEntities(cv::Mat& rgbFrame, cv::Mat& mask);
+
+	bool findLargestSquareContour(const cv::Mat& thresh, std::vector<cv::Point>& bestApprox);
+	std::vector<cv::Point2f> orderPoints(std::vector<cv::Point>& pts);
+	cv::Mat warpToSquare(const cv::Mat& image, const std::vector<cv::Point2f>& srcPts, float side = 500.f);
+	void extractGridLines(const cv::Mat& binary, cv::Mat& horizontal, cv::Mat& vertical, int side);
+	void countGridLines(const std::vector<std::vector<cv::Point>>& horContours,
+                               		const std::vector<std::vector<cv::Point>>& verContours,
+                               		int side, int& rowCount, int& colCount);
+	void processGrid(const cv::Mat& binary, const cv::Mat& horizontal, const cv::Mat& vertical, float side, const cv::Mat& warped);
 	cv::Mat elaborateFrame(cv::Mat& image);
-	void boobs();
+
 	
 
 };

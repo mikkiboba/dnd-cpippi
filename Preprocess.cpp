@@ -2,6 +2,7 @@
 
 Preprocess::~Preprocess() {}
 
+
 void Preprocess::defineMedia() {
 #if defined(_WIN32) || defined(_WIN64)
     loopVid = cv::VideoCapture("../../../dnd-cpippi/imgs/tetteFull.mp4");
@@ -11,69 +12,76 @@ void Preprocess::defineMedia() {
 #endif
 }
 
-int Preprocess::detectColor(const cv::Vec3b& hsvColor) {
-    int h = hsvColor[0];
-    int s = hsvColor[1];
-    int v = hsvColor[2];
 
-    if (s < 50 || v < 50) {
-        return TEST_NONE;  // Too gray or dark to classify
+Preprocess::Color Preprocess::detectColor(const cv::Vec3b& hsvColor) {
+    const int h = hsvColor[0];
+    const int s = hsvColor[1];
+    const int v = hsvColor[2];
+
+    constexpr int SAT_THRESH = 50;
+    constexpr int VAL_THRESH = 50;
+
+    if (s < SAT_THRESH || v < VAL_THRESH) {
+        return Color::NONE;  // Too gray or dark to classify
     }
 
-    if ((h < 10) || (h > 160 && h <= 180))
-        return TEST_RED;
-    else if (h >= 35 && h < 85)
-        return TEST_GREEN;
-    else if (h >= 90 && h < 130)
-        return TEST_BLUE;
-    else
-        return TEST_OTHER;
+    if ((h < 10) || (h > 160 && h <= 180))  return Color::RED;
+    else if (h >= 35 && h < 85)             return Color::GREEN;
+    else if (h >= 90 && h < 130)            return Color::BLUE;
+
+    return Color::OTHER;
 }
 
 
-void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
+void Preprocess::initializeDefaults(const cv::Mat& img) {
+    
+    // * vertical/horizontal number of pixels of the image
+    // ? since it's warped, they should be similar
+    defaultPixelVer = img.rows;
+    defaultPixelHor = img.cols;
+
+    std::cout << "pixVer: " << defaultPixelVer << " pixHor: " << defaultPixelHor << std::endl;
+
+    // * vertical/horizontal number of pixel for a single cell
+    defaultCelHor = defaultPixelHor / defaultCols;
+    defaultCelVer = defaultPixelVer / defaultRows;
+
+    std::cout << "celHor: " << defaultCelHor << " celVer: " << defaultCelVer << std::endl;
+
+    // * horizontal/vertical number of pixel for the patch
+    defaultInCelHor = defaultCelHor / 3;
+    defaultInCelVer = defaultCelVer / 3;
+
+    std::cout << "inCelHor: " << defaultInCelHor << " inCelVer: " << defaultInCelVer << std::endl;
+
+    // * horizontal/vertical number of pixel for the offset
+    // ! we dont need it anymore
+    defaultOffsetHor = (defaultCelHor - defaultInCelHor) / 2;
+    defaultOffsetVer = (defaultCelVer - defaultInCelVer) / 2;
+
+    std::cout << "offsetHor: " << defaultOffsetHor << " offsetVer: " << defaultOffsetVer << std::endl;
+
+    // * matrix that contains the last valid positions
+    // * this is the one we send to the app
+    currentMatrix = cv::Mat(defaultRows, defaultCols, CV_32S);
+    currentMatrix.setTo(static_cast<int>(Color::NONE));
+}
+
+
+void Preprocess::findEntities(cv::Mat& rgbFrame, cv::Mat& mask) {
     
     // * convert color image to hsv to detect colors better
-    cv::cvtColor(clothed, clothed, cv::COLOR_BGR2HSV);
+    cv::Mat hsvFrame;
+    cv::cvtColor(rgbFrame, hsvFrame, cv::COLOR_BGR2HSV);
 
     // * set the default values
     // ! this is done only once
-    if (defaultPixelVer == 0 && defaultPixelHor == 0) {
-
-        // * vertical/horizontal number of pixels of the image
-        // ? since it's warped, they should be similar
-        defaultPixelVer = nude.rows;
-        defaultPixelHor = nude.cols;
-
-        std::cout << "pixVer: " << defaultPixelVer << " pixHor: " << defaultPixelHor << std::endl;
-
-        // * vertical/horizontal number of pixel for a single cell
-        defaultCelHor = defaultPixelHor / defaultCols;
-        defaultCelVer = defaultPixelVer / defaultRows;
-
-        std::cout << "celHor: " << defaultCelHor << " celVer: " << defaultCelVer << std::endl;
-
-        // * horizontal/vertical number of pixel for the patch
-        defaultInCelHor = defaultCelHor / 3;
-        defaultInCelVer = defaultCelVer / 3;
-
-        std::cout << "inCelHor: " << defaultInCelHor << " inCelVer: " << defaultInCelVer << std::endl;
-
-        // * horizontal/vertical number of pixel for the offset
-        // ! we dont need it anymore
-        defaultOffsetHor = (defaultCelHor - defaultInCelHor) / 2;
-        defaultOffsetVer = (defaultCelVer - defaultInCelVer) / 2;
-
-        std::cout << "offsetHor: " << defaultOffsetHor << " offsetVer: " << defaultOffsetVer << std::endl;
-
-        // * matrix that contains the last valid positions
-        // * this is the one we send to the app
-        previousValidHoles = cv::Mat(defaultRows, defaultCols, CV_32F, TEST_NONE);
-
-    }
+    if (defaultPixelVer == 0 && defaultPixelHor == 0)
+        initializeDefaults(rgbFrame);
 
     // * matrix of the positions in the frame
-    cv::Mat holes(defaultRows, defaultCols, CV_32F, TEST_NONE);
+    cv::Mat frameMatrix(defaultRows, defaultCols, CV_32S);
+    frameMatrix.setTo(static_cast<int>(Color::NONE));
 
     int halfInVer = defaultInCelVer / 2;
     int halfInHor = defaultInCelHor / 2;
@@ -84,32 +92,33 @@ void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
     
     cv::parallel_for_(cv::Range(0, defaultRows * defaultCols), [&](const cv::Range& range) {
         for (int index = range.start; index < range.end; ++index) {
-            int currRow = index / defaultCols;
-            int currCol = index % defaultCols;
+            const int currRow = index / defaultCols;
+            const int currCol = index % defaultCols;
 
-            int i = currCol * defaultCelHor + halfCelHor;
-            int j = currRow * defaultCelVer + halfCelVer;
+            const int i = currCol * defaultCelHor + halfCelHor;
+            const int j = currRow * defaultCelVer + halfCelVer;
 
-            if (holes.at<float>(currRow, currCol) != TEST_NONE)
+            if (frameMatrix.at<int>(currRow, currCol) != static_cast<int>(Color::NONE))
                 continue;
 
+            bool foundColor = false;
             for (int dy = -halfInVer; dy <= halfInVer; ++dy) {
-                int y = j + dy;
-                if (y < 0 || y >= nude.rows) continue;
+                const int y = j + dy;
+                if (y < 0 || y >= mask.rows) continue;
 
                 for (int dx = -halfInHor; dx <= halfInHor; ++dx) {
-                    int x = i + dx;
-                    if (x < 0 || x >= nude.cols) continue;
+                    const int x = i + dx;
+                    if (x < 0 || x >= mask.cols) continue;
 
-                    int nudeValue = nude.at<uchar>(y, x);
-                    if (nudeValue != 0) {
-                        const cv::Vec3b& color = clothed.at<cv::Vec3b>(y, x);
-                        holes.at<float>(currRow, currCol) = detectColor(color);
-                        goto patchDone;
+                    int grayValue = mask.at<uchar>(y, x);
+                    if (grayValue != 0) {
+                        const cv::Vec3b& color = hsvFrame.at<cv::Vec3b>(y, x);
+                        frameMatrix.at<int>(currRow, currCol) = static_cast<int>(detectColor(color));
+                        foundColor = true;
+                        break;
                     }
                 }
             }
-        patchDone:;
         }
     });
 
@@ -117,16 +126,11 @@ void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
     // * checks if the previous valid matrix is different from the current frame matrix
     // * if different, then a change has occured and update the valid matrix
     
-    cv::Mat holesDiff;
-    
-    cv::compare(previousValidHoles, holes, holesDiff, cv::CMP_NE);
-    
-    
-    if (cv::countNonZero(holesDiff) > 0) {
-        
-        
-        holes.copyTo(previousValidHoles);
-
+    cv::Mat matrixDiff;
+    cv::compare(currentMatrix, frameMatrix, matrixDiff, cv::CMP_NE);
+    if (cv::countNonZero(matrixDiff) > 0) {
+        frameMatrix.copyTo(currentMatrix);
+        // std::cout << currentMatrix << std::endl;
     }
     
 
@@ -137,173 +141,167 @@ void Preprocess::findEntitties(cv::Mat& clothed, cv::Mat& nude) {
 }
 
 
-cv::Mat Preprocess::elaborateFrame(cv::Mat& image) {
-
-    cv::Mat gray, blur, thresh;
-    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
-    cv::GaussianBlur(gray, blur, cv::Size(5, 5), 0);
-
-    cv::adaptiveThreshold(blur, thresh, 255, cv::ADAPTIVE_THRESH_MEAN_C,
-        cv::THRESH_BINARY_INV, 15, 4);
+bool Preprocess::findLargestSquareContour(const cv::Mat& thresh, std::vector<cv::Point>& bestApprox) {
 
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours(thresh.clone(), contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
     double maxArea = 0;
-    int maxIdx = -1;
-    std::vector<cv::Point> bestApprox;
+    bool found = false;
 
-    for (int i = 0; i < contours.size(); ++i) {
-        double area = cv::contourArea(contours[i]);
+    for (const auto& contour : contours) {
+        double area = cv::contourArea(contour);
         if (area < 100) continue;
 
         std::vector<cv::Point> approx;
-        cv::approxPolyDP(contours[i], approx, 0.02 * cv::arcLength(contours[i], true), true);
+        cv::approxPolyDP(contour, approx, 0.02 * cv::arcLength(contour, true), true);
 
-        if (approx.size() == 4 && cv::isContourConvex(approx)) {
-            if (area > maxArea) {
-                maxArea = area;
-                maxIdx = i;
-                bestApprox = approx;
-            }
+        if (approx.size() == 4 && cv::isContourConvex(approx) && area > maxArea) {
+            maxArea = area;
+            bestApprox = approx;
+            found = true;
+        }
+    }
+    return found;
+
+}
+
+
+std::vector<cv::Point2f> Preprocess::orderPoints(std::vector<cv::Point>& pts) {
+    std::vector<cv::Point2f> ordered(4);
+    std::sort(pts.begin(), pts.end(), [](cv::Point a, cv::Point b) { return a.y < b.y; });
+
+    if (pts[0].x < pts[1].x) {
+        ordered[0] = pts[0]; // top-left
+        ordered[1] = pts[1]; // top-right
+    }
+    else {
+        ordered[0] = pts[1];
+        ordered[1] = pts[0];
+    }
+
+    if (pts[2].x < pts[3].x) {
+        ordered[3] = pts[2]; // bottom-left
+        ordered[2] = pts[3]; // bottom-right
+    }
+    else {
+        ordered[3] = pts[3];
+        ordered[2] = pts[2];
+    }
+    return ordered;
+}
+
+
+cv::Mat Preprocess::warpToSquare(const cv::Mat& image, const std::vector<cv::Point2f>& srcPts, float side) {
+    std::vector<cv::Point2f> dstPts = {
+        cv::Point2f(0, 0),
+        cv::Point2f(side - 1, 0),
+        cv::Point2f(side - 1, side - 1),
+        cv::Point2f(0, side - 1)
+    };
+
+    cv::Mat M = cv::getPerspectiveTransform(srcPts, dstPts);
+    cv::Mat warped;
+    cv::warpPerspective(image, warped, M, cv::Size(side, side));
+    return warped;
+}
+
+
+void Preprocess::extractGridLines(const cv::Mat& binary, cv::Mat& horizontal, cv::Mat& vertical, int side) {
+    int morphSize = side / 20;  // adjust based on grid size
+
+    cv::Mat hor_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(morphSize, 1));
+    cv::morphologyEx(binary, horizontal, cv::MORPH_OPEN, hor_kernel);
+
+    cv::Mat ver_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, morphSize));
+    cv::morphologyEx(binary, vertical, cv::MORPH_OPEN, ver_kernel);
+}
+
+
+void Preprocess::countGridLines(const std::vector<std::vector<cv::Point>>& horContours,
+                               const std::vector<std::vector<cv::Point>>& verContours,
+                               int side, int& rowCount, int& colCount) {
+    rowCount = -1;
+    colCount = -1;
+
+    for (const auto& contour : horContours) {
+        cv::Rect bbox = cv::boundingRect(contour);
+        if (bbox.width > side * 0.5) { // horizontal line must be > 50% width
+            rowCount++;
         }
     }
 
-    if (maxIdx >= 0) {
-        // Draw the largest square
-        std::vector<std::vector<cv::Point>> drawContoursVec = { bestApprox };
-        //cv::drawContours(image, drawContoursVec, 0, cv::Scalar(0, 255, 0), 2);
-
-        // ----- Grid Estimation -----
-        // Step 1: Order corners
-        auto orderPoints = [](std::vector<cv::Point>& pts) -> std::vector<cv::Point2f> {
-            std::vector<cv::Point2f> ordered(4);
-            std::sort(pts.begin(), pts.end(), [](cv::Point a, cv::Point b) { return a.y < b.y; });
-
-            if (pts[0].x < pts[1].x) {
-                ordered[0] = pts[0]; // top-left
-                ordered[1] = pts[1]; // top-right
-            }
-            else {
-                ordered[0] = pts[1];
-                ordered[1] = pts[0];
-            }
-
-            if (pts[2].x < pts[3].x) {
-                ordered[3] = pts[2]; // bottom-left
-                ordered[2] = pts[3]; // bottom-right
-            }
-            else {
-                ordered[3] = pts[3];
-                ordered[2] = pts[2];
-            }
-
-            return ordered;
-        };
-
-        std::vector<cv::Point2f> orderedPts = orderPoints(bestApprox);
-
-        // Step 2: Warp the square to top-down view
-        float side = 500.0f;
-        std::vector<cv::Point2f> dstPts = {
-            cv::Point2f(0, 0),
-            cv::Point2f(side - 1, 0),
-            cv::Point2f(side - 1, side - 1),
-            cv::Point2f(0, side - 1)
-        };
-
-        cv::Mat M = cv::getPerspectiveTransform(orderedPts, dstPts);
-        cv::Mat warped;
-        cv::warpPerspective(image, warped, M, cv::Size(side, side));
-
-        // Step 3: Enhance and threshold
-        cv::Mat grayWarped, binary;
-        cv::cvtColor(warped, grayWarped, cv::COLOR_BGR2GRAY);
-        cv::adaptiveThreshold(grayWarped, binary, 255, cv::ADAPTIVE_THRESH_MEAN_C,
-            cv::THRESH_BINARY_INV, 15, 4);
-
-
-        // Step 4: Morphological line detection
-        int morphSize = side / 20;  // adjust based on grid size
-
-        // Horizontal lines
-        cv::Mat hor_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(morphSize, 1));
-        cv::Mat horizontal;
-        cv::morphologyEx(binary, horizontal, cv::MORPH_OPEN, hor_kernel);
-
-
-
-
-        // Vertical lines
-        cv::Mat ver_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, morphSize));
-        cv::Mat vertical;
-        cv::morphologyEx(binary, vertical, cv::MORPH_OPEN, ver_kernel);
-
-        // Step 5: Count contours
-        std::vector<std::vector<cv::Point>> horContours, verContours;
-        cv::findContours(horizontal, horContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-        cv::findContours(vertical, verContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-        // Step 5: Filter and count meaningful lines (ignore short ones)
-        int rowCount = -1;
-        int colCount = -1;
-
-        for (const auto& contour : horContours) {
-            cv::Rect bbox = cv::boundingRect(contour);
-            if (bbox.width > side * 0.5) { // horizontal line must be > 50% width
-                rowCount++;
-                // Optional: draw for debugging
-                // cv::drawContours(warped, std::vector<std::vector<cv::Point>>{contour}, -1, cv::Scalar(255, 0, 0), 1);
-            }
+    for (const auto& contour : verContours) {
+        cv::Rect bbox = cv::boundingRect(contour);
+        if (bbox.height > side * 0.5) { // vertical line must be > 50% height
+            colCount++;
         }
-
-        for (const auto& contour : verContours) {
-            cv::Rect bbox = cv::boundingRect(contour);
-            if (bbox.height > side * 0.5) { // vertical line must be > 50% height
-                colCount++;
-                // Optional: draw for debugging
-                // cv::drawContours(warped, std::vector<std::vector<cv::Point>>{contour}, -1, cv::Scalar(0, 0, 255), 1);
-            }
-        }
-
-        if (defaultRows == -1 && defaultCols == -1) {
-            defaultRows = rowCount;
-            defaultCols = colCount;
-        }
+    }
+}
 
 
-        //std::cout << "Rows: " << rowCount << std::endl;
-        //std::cout << "Cols: " << colCount << std::endl;
+void Preprocess::processGrid(const cv::Mat& binary, const cv::Mat& horizontal, const cv::Mat& vertical, float side, const cv::Mat& warped) {
+    cv::Mat mask;
+    cv::absdiff(binary, horizontal, mask);
+    cv::absdiff(mask, vertical, mask);
+
+    int size = 4;
+    cv::Mat morphValue = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(size, size));
+    cv::morphologyEx(mask, mask, cv::MORPH_OPEN, morphValue);
+    cv::medianBlur(mask, mask, 3);
+
+    findEntities(const_cast<cv::Mat&>(warped), mask);
+}
 
 
-        if (rowCount == defaultRows && colCount == defaultCols) {
+cv::Mat Preprocess::elaborateFrame(cv::Mat& image) {
+    cv::Mat gray, blur, thresh;
+    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(gray, blur, cv::Size(5, 5), 0);
 
-            cv::Mat bra;
-            cv::absdiff(binary, horizontal, bra);
-            cv::absdiff(bra, vertical, bra);
+    cv::adaptiveThreshold(blur, thresh, 255, cv::ADAPTIVE_THRESH_MEAN_C,
+                          cv::THRESH_BINARY_INV, 15, 4);
 
-            int boobsCup = 4;
-            cv::Mat takeItOff = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(boobsCup, boobsCup));
-            cv::morphologyEx(bra, bra, cv::MORPH_OPEN, takeItOff);
-            cv::medianBlur(bra, bra, 3); // Kernel size must be odd
+    std::vector<cv::Point> bestApprox;
+    if (!findLargestSquareContour(thresh, bestApprox)) {
+        // No suitable square found, return original image
+        return image;
+    }
 
-            findEntitties(warped, bra);
+    std::vector<cv::Point2f> orderedPts = orderPoints(bestApprox);
+    float side = 500.0f;
+    cv::Mat warped = warpToSquare(image, orderedPts, side);
 
-        }
+    cv::Mat grayWarped, binary;
+    cv::cvtColor(warped, grayWarped, cv::COLOR_BGR2GRAY);
+    cv::adaptiveThreshold(grayWarped, binary, 255, cv::ADAPTIVE_THRESH_MEAN_C,
+                          cv::THRESH_BINARY_INV, 15, 4);
 
+    cv::Mat horizontal, vertical;
+    extractGridLines(binary, horizontal, vertical, static_cast<int>(side));
 
-        // Optionally draw warped image for debugging
-        // cv::imshow("Warped", warped);
-        // cv::imshow("Horizontal Lines", horizontal);
-        // cv::imshow("Vertical Lines", vertical);
+    std::vector<std::vector<cv::Point>> horContours, verContours;
+    cv::findContours(horizontal, horContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    cv::findContours(vertical, verContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    int rowCount, colCount;
+    countGridLines(horContours, verContours, static_cast<int>(side), rowCount, colCount);
+
+    if (defaultRows == -1 && defaultCols == -1) {
+        defaultRows = rowCount;
+        defaultCols = colCount;
+    }
+
+    if (rowCount == defaultRows && colCount == defaultCols) {
+        processGrid(binary, horizontal, vertical, side, warped);
     }
 
     return image;
 }
 
 
-void Preprocess::boobs() {
+void Preprocess::run() {
 
     defineMedia();
     cv::Mat frame;

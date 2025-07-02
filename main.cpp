@@ -11,6 +11,6 @@ void showImg(cv::Mat img) {
 
 int main() {
     Preprocess p = Preprocess();
-    p.boobs();
+    p.run();
     return 0;
 }
