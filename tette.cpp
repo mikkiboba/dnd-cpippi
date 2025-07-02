@@ -1,99 +1,7 @@
 #include <opencv2/opencv.hpp>
 
-
-cv::VideoCapture bgVid;
-cv::Mat frameBg;
-cv::VideoCapture gridVid;
-cv::Mat frameGrid;
 cv::VideoCapture loopVid;
 
-
-
-
-bool isLargeQuadrilateral(const std::vector<cv::Point>& contour, std::vector<cv::Point>& approx, double minArea = 1000.0) {
-    cv::approxPolyDP(contour, approx, cv::arcLength(contour, true) * .02, true);
-    return (approx.size() == 4 && std::fabs(cv::contourArea(approx)) > minArea && cv::isContourConvex(approx));
-}
-
-
-cv::Mat thiccThighs(cv::Mat& frame, cv::Mat& backgroundGridImg) {
-
-    cv::Mat gray, gayGrid;
-    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(backgroundGridImg, gayGrid, cv::COLOR_BGR2GRAY);
-
-    cv::Mat blurred, gayBlurred;
-    cv::GaussianBlur(gray, blurred, cv::Size(5, 5), 0);
-    cv::GaussianBlur(gayGrid, gayBlurred, cv::Size(5, 5), 0);
-
-    cv::Mat diffGray;
-    cv::absdiff(gray, gayGrid, diffGray);
-
-    cv::Mat thresh;
-    cv::threshold(diffGray, thresh, 25, 255, cv::THRESH_BINARY);
-
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
-	cv::morphologyEx(thresh, thresh, cv::MORPH_OPEN, kernel);
-	cv::morphologyEx(thresh, thresh, cv::MORPH_CLOSE, kernel);
-
-    cv::Mat edges;
-    cv::Canny(thresh, edges, 50, 150);
-
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    
-    double maxArea = 0;
-    std::vector<cv::Point> biggestQuad;
-
-    for (const std::vector<cv::Point>& contour : contours) {
-        std::vector<cv::Point> approx;
-        if (isLargeQuadrilateral(contour, approx)) {
-            double area = cv::contourArea(approx);
-            if (area > maxArea) {
-                maxArea = area;
-                biggestQuad = approx;
-            }
-        }
-    }
-
-    if (biggestQuad.size() == 4) {
-        // Draw the quadrilateral
-        cv::polylines(frame, biggestQuad, true, cv::Scalar(0, 255, 0), 3);
-
-        for (int i = 0; i < 4; ++i) {
-            cv::circle(frame, biggestQuad[i], 5, cv::Scalar(0, 0, 255), -1);
-            cv::putText(frame, std::to_string(i), biggestQuad[i], cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
-        }
-    }
-
-    return frame;
-
-}
-
-
-void defineMedia() {
-    
-    #if defined(_WIN32) || defined(_WIN64)
-        bgVid = cv::VideoCapture("../../../dnd-cpippi/imgs/bgtette.mp4");
-    #endif
-    #if defined(__APPLE__) || defined(__MACH__)
-        bgVid = cv::VideoCapture("../imgs/bgtette.mp4");
-    #endif
-    bgVid.read(frameBg);
-    #if defined(_WIN32) || defined(_WIN64)
-        gridVid = cv::VideoCapture("../../../dnd-cpippi/imgs/tetteGrid.mp4");
-    #endif
-    #if defined(__APPLE__) || defined(__MACH__)
-        gridVid = cv::VideoCapture("../imgs/tetteGrid.mp4");
-    #endif
-    gridVid.read(frameGrid);
-    #if defined(_WIN32) || defined(_WIN64)
-        loopVid = cv::VideoCapture("../../../dnd-cpippi/imgs/tetteFull.mp4");
-    #endif
-    #if defined(__APPLE__) || defined(__MACH__)
-        loopVid = cv::VideoCapture("../imgs/tetteFull.mp4");
-    #endif
-}
 
 int defaultRows = -1;
 int defaultCols = -1;
@@ -113,20 +21,23 @@ int defaultOffsetVer = 0;
 int gridRows = 0;
 int gridCols = 0;
 
-cv::Vec3b defaultColor = cv::Vec3b(0,0,0);
+cv::Vec3b defaultColor = cv::Vec3b(0, 0, 0);
 
 
 int count = 0;
 
 
-std::pair<int, int> transitionToGridCoordinates(int& x, int& y) {
 
-    int col = x / defaultCelHor;
-    int row = y / defaultCelVer;
 
-    return {row, col};
-
+void defineMedia() {
+    #if defined(_WIN32) || defined(_WIN64)
+        loopVid = cv::VideoCapture("../../../dnd-cpippi/imgs/tetteFull.mp4");
+    #endif
+    #if defined(__APPLE__) || defined(__MACH__)
+        loopVid = cv::VideoCapture("../imgs/tetteFull.mp4");
+    #endif
 }
+
 
 
 enum TestColors {
@@ -258,148 +169,7 @@ void findEntitties(cv::Mat& clothed, cv::Mat& nude) {
     //cv::imshow("", copy);
     //cv::waitKey(0);
 
-    /*
-    for (int i = defaultCelHor/2; i <= defaultPixelHor - (defaultCelHor/2); i += defaultCelHor) {
-        for (int j = defaultCelVer/2; j <= defaultPixelVer - (defaultCelVer/2); j += defaultCelVer){
-
-            int currRow = (j / defaultCelVer);
-            int currCol = (i / defaultCelHor);
-
-            int y = j - defaultInCelVer/2;
-            while (y <= j + defaultInCelVer/2) {
-                if (holes.at<float>(currRow, currCol) != TEST_NONE)
-                    break;
-
-                if (y >= 0 && y < nude.rows && i >= 0 && i < nude.cols) {
-                    int nudeValue = (int)nude.at<uchar>(y, i);
-                    if (nudeValue != 0) {
-                        cv::Vec3b color = clothed.at<cv::Vec3b>(y, i);
-                        holes.at<float>(currRow, currCol) = detectColor(color);
-                        break;
-                    }
-                }
-
-                cv::circle(copy, cv::Point(i, y), 1, cv::Scalar(0,255,0), 1);
-                y++;
-            }
-        }
-    }
-
-    for (int j = defaultCelVer/2; j <= defaultPixelVer - (defaultCelVer/2); j += defaultCelVer){
-        for (int i = defaultCelHor/2; i <= defaultPixelHor - (defaultCelHor/2); i += defaultCelHor) {
-
-            int currRow = (j / defaultCelVer);
-            int currCol = (i / defaultCelHor);
-
-            int x = i - defaultInCelHor/2;
-            while (x <= i + defaultInCelVer/2) {
-                if (holes.at<float>(currRow, currCol) != TEST_NONE)
-                    break;
-
-                if (x >= 0 && x < nude.rows && j >= 0 && j < nude.cols) {
-                    int nudeValue = (int)nude.at<uchar>(j, x);
-                    if (nudeValue != 0) {
-                        cv::Vec3b color = clothed.at<cv::Vec3b>(j, x);
-                        //std::cout << color << std::endl;
-                        holes.at<float>(currRow, currCol) = detectColor(color);
-                        break;
-                    }
-                }
-
-                cv::circle(copy, cv::Point(x, j), 1, cv::Scalar(0,255,0), 1);
-                x++;
-            }
-        }
-    }
-
-    cv::Mat holesDiff;
-    cv::compare(previousValidHoles, holes, holesDiff, cv::CMP_NE);
-    if (cv::countNonZero(holesDiff) > 0) {
-        holes.copyTo(previousValidHoles);
-        std::cout << previousValidHoles << std::endl;
-    }
-
-
-    /*for (int i = 0; i < defaultCols; i++) {
-        for (int j = 0; j < defaultRows; j++) {
-            float c = holes.at<float>(j, i);
-            if (c != TEST_NONE)
-                std::cout << c << " (" << i << "," << j << ")" << std::endl;
-        }
-    }
-
     
-    for (int i = defaultOffsetHor; i < defaultPixelHor - defaultOffsetHor - defaultInCelHor; i += defaultInCelHor + 2*defaultOffsetHor) {
-        for (int j = defaultOffsetVer + static_cast<int>(defaultInCelVer/2); j < defaultPixelVer - defaultOffsetVer - defaultInCelHor; i += defaultInCelVer + 2*defaultOffsetVer) {
-
-            bool found = false;
-
-            int x = i;
-            int y = j;
-
-            std::cout << x << "," << y << std::endl;
-            exit(0);
-
-            while(y <= i+defaultInCelVer && !found) {
-
-                int puntoG = nude.at<int>(y, x);
-
-                if (puntoG != 0) {
-                    found = true;
-
-                    cv::Vec3i color = clothed.at<cv::Vec3i>(y, x);
-                    holes.at<cv::Vec3i>(y/defaultCelVer, x/defaultCelHor) = color;
-                }
-                y++;
-            }
-        }
-    }*/
-}
-
-
-void palleColorate(cv::Mat& img) {
-    cv::Mat data;
-    img.convertTo(data, CV_32F);
-    data = data.reshape(1, img.rows * img.cols); // Each row is a pixel with 3 values (BGR)
-
-    // Apply K-means clustering
-    int K = 3; // Number of color clusters (you can try 2-5 depending on complexity)
-    cv::Mat labels, centers;
-    cv::kmeans(data, K, labels,
-               cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 10, 1.0),
-               3, cv::KMEANS_PP_CENTERS, centers);
-
-    // Find which cluster is most distinct (assume the smallest is the object)
-    std::vector<int> cluster_counts(K, 0);
-    for (int i = 0; i < labels.rows; i++) {
-        cluster_counts[labels.at<int>(i)]++;
-    }
-
-    // Find the cluster with the smallest count (likely the unique object)
-    int min_cluster = std::min_element(cluster_counts.begin(), cluster_counts.end()) - cluster_counts.begin();
-
-    // Create mask for that cluster
-    cv::Mat mask(img.size(), CV_8UC1);
-    for (int i = 0; i < labels.rows; i++) {
-        mask.at<uchar>(i / img.cols, i % img.cols) = (labels.at<int>(i) == min_cluster) ? 255 : 0;
-    }
-
-    // Optional: Clean up mask
-    cv::morphologyEx(mask, mask, cv::MORPH_OPEN, cv::Mat(), cv::Point(-1,-1), 2);
-
-    // Find contours and draw bounding boxes
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    for (const auto& contour : contours) {
-        cv::Rect box = cv::boundingRect(contour);
-        cv::rectangle(img, box, cv::Scalar(0, 0, 255), 2);
-    }
-
-    // Show result
-    cv::imshow("Detected Object", img);
-    cv::imshow("Mask", mask);
-    cv::waitKey(0);
 }
 
 

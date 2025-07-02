@@ -1,77 +1,55 @@
 #pragma once
 #include <opencv2/opencv.hpp> 
 
-enum Colors {
-	RED,
-	GREEN,
-	BLUE,
-	YELLOW,
-	CYAN,
-	MAGENTA,
-	ORANGE,
-	GRAY,
-	PURPLE,
-	WHITE,
-	BLACK,
-	OTHER
+enum TestColors {
+	TEST_RED = 1,
+	TEST_GREEN = 2,
+	TEST_BLUE = 3,
+	TEST_OTHER = 4,
+	TEST_NONE = 0
 };
 
-enum Dir {
-	X,
-	Y
-};
-
-enum Side {
-	RIGHT,
-	LEFT,
-	TOP,
-	BOTTOM
-};
 
 class Preprocess {
 private:
-	cv::Mat fgMask; // grid mask
-	cv::Mat entityMask;
+	cv::VideoCapture loopVid;
 
-	cv::Point pt1;				// top left
-	cv::Point pt2;				// top right
-	cv::Point pt3;				// bottom left
-	cv::Point pt4;				// bottom right
 
-	int offsetXL;
-	int offsetXR;
-	int offsetYT;
-	int offsetYB;
+	int defaultRows = -1;
+	int defaultCols = -1;
 
-	bool fgMaskCreated = false;
+	int defaultPixelHor = 0;
+	int defaultPixelVer = 0;
+
+	int defaultCelHor = 0;
+	int defaultCelVer = 0;
+
+	int defaultInCelHor = 0;
+	int defaultInCelVer = 0;
+
+	int defaultOffsetHor = 0;
+	int defaultOffsetVer = 0;
+
+	int gridRows = 0;
+	int gridCols = 0;
+
+	cv::Vec3b defaultColor = cv::Vec3b(0, 0, 0);
+
+
+	int count = 0;
+	cv::Mat previousValidHoles;
+
+	
 
 public:
 	Preprocess() {};
 	~Preprocess();
-	bool isChanged(cv::Mat& referenceFrame, cv::Mat& currentFrame, double threshold);
-	void emptyGridMask(cv::Mat& original, cv::Mat& background);
-	void generateEntityMask(cv::Mat& original, cv::Mat& backgroundGridImg);
-	int getOffset(Dir direction, Side side);
-	void generateVertices();
-	void visualizeVertices();
 
-	// * test functions
-	bool isHandPresent(cv::Mat referenceFrame, cv::Mat currentFrame);
-
-	// i const e & velocizzano restituendo direttamente la reference senza fare copie , dovrebbere essere safe nel nostro caso
-	inline  cv::Mat& getFgMask()  { return fgMask; }   
-	inline const cv::Mat& getEntityMask() const { return entityMask; }
-	inline const cv::Point& getPt1() const { return pt1; }
-	inline const cv::Point& getPt2() const { return pt2; }
-	inline const cv::Point& getPt3() const { return pt3; }
-	inline const cv::Point& getPt4() const { return pt4; }
-
-	inline const int& getOffsetXL() const { return offsetXL; }
-	inline const int& getOffsetXR() const { return offsetXR; }
-	inline const int& getOffsetYT() const { return offsetYT; }
-	inline const int& getOffsetYB() const { return offsetYB; }
-
-
-	void stab();
+	void defineMedia();
+	int detectColor(const cv::Vec3b& hsvColor);
+	void findEntitties(cv::Mat& clothed, cv::Mat& nude);
+	cv::Mat elaborateFrame(cv::Mat& image);
+	void boobs();
+	
 
 };
