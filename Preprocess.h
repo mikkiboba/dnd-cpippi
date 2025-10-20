@@ -1,5 +1,5 @@
 #pragma once
-#include <opencv2/opencv.hpp> 
+#include <opencv2/opencv.hpp>
 #include <chrono>
 
 
@@ -9,10 +9,12 @@ class Preprocess {
 public:
 	enum class Color : int {
 		NONE 	= 0,
-		RED		= 1,
-		GREEN	= 2,
+		RED		= 1,	// enemies
+		GREEN	= 2,	// obstacles
 		BLUE	= 3,
-		OTHER	= 4
+		YELLOW	= 4,
+		ORANGE	= 5,
+		OTHER	= -1
 	};
 
 private:
@@ -43,6 +45,9 @@ private:
 	int count = 0;
 	cv::Mat currentMatrix;
 
+	bool sendBool = false;
+	bool debug = false;
+
 	
 
 public:
@@ -67,6 +72,7 @@ public:
 	void processGrid(const cv::Mat& binary, const cv::Mat& horizontal, const cv::Mat& vertical, float side, const cv::Mat& warped);
 	cv::Mat elaborateFrame(cv::Mat& image);
 
-	
+	void runServer();
+	void sendIntMat(int socket_fd, const cv::Mat& mat);
 
 };

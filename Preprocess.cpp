@@ -1,5 +1,19 @@
 #include "Preprocess.h"
 
+#include <opencv2/opencv.hpp>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <vector>
+#include <iostream>
+
+#include <ifaddrs.h>
+#include <cstring>
+
+#include <chrono>
+
+
 Preprocess::~Preprocess() {}
 
 
@@ -31,6 +45,7 @@ Preprocess::Color Preprocess::detectColor(const cv::Vec3b& hsvColor) {
 
     return Color::OTHER;
 }
+
 
 
 void Preprocess::initializeDefaults(const cv::Mat& img) {
@@ -73,6 +88,22 @@ void Preprocess::findEntities(cv::Mat& rgbFrame, cv::Mat& mask) {
     // * convert color image to hsv to detect colors better
     cv::Mat hsvFrame;
     cv::cvtColor(rgbFrame, hsvFrame, cv::COLOR_BGR2HSV);
+    
+    // Split into individual channels
+    std::vector<cv::Mat> hsvChannels;
+    cv::split(hsvFrame, hsvChannels);
+    
+    // Create CLAHE objects for saturation and value channels
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
+    clahe->setClipLimit(2.0);  // Adjust based on lighting conditions
+    clahe->setTilesGridSize(cv::Size(8, 8));  // 8x8 grid
+    
+    // Apply CLAHE to saturation and value channels
+    clahe->apply(hsvChannels[1], hsvChannels[1]);  // Saturation
+    clahe->apply(hsvChannels[2], hsvChannels[2]);  // Value
+    
+    // Merge back the channels
+    cv::merge(hsvChannels, hsvFrame);
 
     // * set the default values
     // ! this is done only once
@@ -123,6 +154,8 @@ void Preprocess::findEntities(cv::Mat& rgbFrame, cv::Mat& mask) {
     });
 
     
+
+    
     // * checks if the previous valid matrix is different from the current frame matrix
     // * if different, then a change has occured and update the valid matrix
     
@@ -130,7 +163,8 @@ void Preprocess::findEntities(cv::Mat& rgbFrame, cv::Mat& mask) {
     cv::compare(currentMatrix, frameMatrix, matrixDiff, cv::CMP_NE);
     if (cv::countNonZero(matrixDiff) > 0) {
         frameMatrix.copyTo(currentMatrix);
-        // std::cout << currentMatrix << std::endl;
+        std::cout << currentMatrix << std::endl;
+        sendBool = true;
     }
     
 
@@ -166,6 +200,7 @@ bool Preprocess::findLargestSquareContour(const cv::Mat& thresh, std::vector<cv:
     return found;
 
 }
+
 
 
 std::vector<cv::Point2f> Preprocess::orderPoints(std::vector<cv::Point>& pts) {
@@ -278,6 +313,9 @@ cv::Mat Preprocess::elaborateFrame(cv::Mat& image) {
     cv::adaptiveThreshold(grayWarped, binary, 255, cv::ADAPTIVE_THRESH_MEAN_C,
                           cv::THRESH_BINARY_INV, 15, 4);
 
+    cv::imshow("", warped);
+    cv::waitKey(10);
+
     cv::Mat horizontal, vertical;
     extractGridLines(binary, horizontal, vertical, static_cast<int>(side));
 
@@ -301,17 +339,147 @@ cv::Mat Preprocess::elaborateFrame(cv::Mat& image) {
 }
 
 
+void Preprocess::sendIntMat(int socket_fd, const cv::Mat& mat) {
+    CV_Assert(mat.depth() == CV_32S || mat.depth() == CV_16U || mat.depth() == CV_8U);
+
+    // Send header
+    int header[4] = {mat.type(), mat.rows, mat.cols, mat.channels()};
+    send(socket_fd, header, sizeof(header), 0);
+
+    // Send data
+    send(socket_fd, mat.data, mat.total() * mat.elemSize(), 0);
+
+    std::cout << "sent (?)" << std::endl;
+}
+
+/*void Preprocess::runServer() {
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(6969);
+
+    bind(server_fd, (struct sockaddr*)&address, sizeof(address));
+    listen(server_fd, 3);
+
+    std::cout << "server started?" <<std::endl;
+
+    while (sendBool) {
+        std::cout << "Waiting for connection..." << std::endl;
+        int client_socket = accept(server_fd, nullptr, nullptr);
+        sendIntMat(client_socket, currentMatrix);
+        sendBool = false;
+        //close(client_socket);
+    }
+}*/
+
+#include <netdb.h>
+
+void Preprocess::runServer() {
+    // Get and print server's IP addresses
+    std::cout << "Server IP addresses:" << std::endl;
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        return;
+    }
+
+    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr) continue;
+        
+        int family = ifa->ifa_addr->sa_family;
+        if (family == AF_INET) { // IPv4
+            char host[NI_MAXHOST];
+            getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in),
+                       host, NI_MAXHOST, nullptr, 0, NI_NUMERICHOST);
+            std::cout << "  " << ifa->ifa_name << ": " << host << std::endl;
+        }
+    }
+    freeifaddrs(ifaddr);
+
+    // Create server socket
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(6969);
+
+    bind(server_fd, (struct sockaddr*)&address, sizeof(address));
+    listen(server_fd, 3);
+
+    std::cout << "\nServer started on port 6969" << std::endl;
+    std::cout << "Clients should connect to one of the above IP addresses" << std::endl;
+
+    while (sendBool) {
+        std::cout << "\nWaiting for connection..." << std::endl;
+        sockaddr_in client_addr;
+        socklen_t client_addr_len = sizeof(client_addr);
+        int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &client_addr_len);
+        
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(client_addr.sin_addr), client_ip, INET_ADDRSTRLEN);
+        std::cout << "Connection from: " << client_ip << std::endl;
+        
+        sendIntMat(client_socket, currentMatrix);
+        sendBool = false;
+        close(client_socket);
+    }
+    close(server_fd);
+}
+
+
+void openStream(cv::VideoCapture& capture, const std::string& streamURL, int delayMs = 1000) {
+
+    capture.open(streamURL, cv::CAP_FFMPEG);
+
+    while(!capture.isOpened()) {
+        std::cerr << "Failed to connect to the webcam. Retrying in " << delayMs << "ms..." << std::endl;
+        cv::waitKey(delayMs);
+        capture.open(streamURL, cv::CAP_FFMPEG);
+    }
+
+}
+
+
+
 void Preprocess::run() {
 
     defineMedia();
+
+    std::string streamURL = "http://10.230.69.215:8080/video";
+    // streamURL = "http://192.168.1.14:8080/video";
+    cv::VideoCapture testVid;
+    openStream(testVid, streamURL, 1000);
+    testVid.set(cv::CAP_PROP_BUFFERSIZE, 10);
+    testVid.set(cv::CAP_PROP_FPS, 15);
+
+
     cv::Mat frame;
+
+    auto lastRun = std::chrono::steady_clock::now();
+
     while (true) {
-        loopVid.read(frame);
+        testVid.read(frame);
         if (frame.empty()) break;
 
+        debug = false;
+        
         cv::Mat uu = elaborateFrame(frame);
+        auto now = std::chrono::steady_clock::now();
 
-        //cv::imshow("frame", uu);
+        // Run every 2 seconds
+        if (sendBool && !debug) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastRun);
+            if (elapsed.count() >= 2) {
+                runServer();
+                lastRun = now;  // Reset timer
+            }
+        }
+
+
+
+        cv::imshow("frame", frame);
+        cv::waitKey(10);
         //int key = cv::waitKey(0);
         //if (key == 'q') break;
     }
